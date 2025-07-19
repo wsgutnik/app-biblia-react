@@ -1,0 +1,4 @@
+/* This file uses Tailwind CSS directives and must be processed with Tailwind via PostCSS or a compatible build tool. 
+   If you see 'Unknown at rule @tailwind', ensure your build setup includes Tailwind CSS processing. */
+
+@import 'tailwindcss';
