@@ -1,11 +1,10 @@
 import React from 'react';
 
-// Adicionamos o novo objeto 'Dicionários'
 const TABS_CONFIG = [
   { id: 'reader', label: 'Leitura' },
   { id: 'search', label: 'Busca' },
   { id: 'dictionary', label: 'Dicionários' },
-  { id: 'random', label: 'Verso Aleatório' },
+  { id: 'commentary', label: 'Comentários' },
 ];
 
 function Tabs({ activeTab, setActiveTab }) {

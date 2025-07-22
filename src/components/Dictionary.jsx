@@ -3,24 +3,19 @@ import { BOOKS } from '../data';
 
 // --- Sub-componente para a nova página de detalhes da palavra ---
 const EntryDetailView = ({ entry, bibleData, onBack }) => {
-  const [translation, setTranslation] = useState('A traduzir...');
-  const [error, setError] = useState(null);
+  const [translation, setTranslation] = useState('Traduzindo...');
 
   // Efeito para traduzir a definição quando a palavra muda
   useEffect(() => {
-    // Função auto-invocável para usar async/await dentro do useEffect
-    (async () => {
+    const translateDefinition = async () => {
       if (!entry.strongs_def) {
         setTranslation('Definição não disponível.');
         return;
       }
-      
-      // Evita retraduções desnecessárias
-      if (translation !== 'A traduzir...') return;
-
       try {
-        const prompt = `Traduza a seguinte definição teológica do inglês para o português do Brasil, mantendo o sentido original de forma concisa: "${entry.strongs_def}"`;
+        const prompt = `Traduza o seguinte texto teológico do inglês para o português brasileiro, mantendo o sentido original de forma concisa: "${entry.strongs_def}"`;
         
+        // Chamada para a API da Máquina (Gemini)
         const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
         const payload = { contents: chatHistory };
         const apiKey = ""; // A chave é fornecida pelo ambiente
@@ -33,31 +28,27 @@ const EntryDetailView = ({ entry, bibleData, onBack }) => {
         });
 
         if (!response.ok) {
-            // Captura erros de rede ou da API (ex: 404, 500)
-            throw new Error(`Erro na API: ${response.status} ${response.statusText}`);
+            throw new Error(`Erro na API: ${response.statusText}`);
         }
 
         const result = await response.json();
         
-        const translatedText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-        if (translatedText) {
-            setTranslation(translatedText);
+        if (result.candidates && result.candidates[0]?.content?.parts[0]?.text) {
+            setTranslation(result.candidates[0].content.parts[0].text);
         } else {
-            // A API respondeu, mas o formato não é o esperado
-            console.error("Resposta da API inválida:", result);
-            throw new Error('A API retornou uma resposta inesperada.');
+            throw new Error('Resposta da API inválida.');
         }
 
-      } catch (err) {
-        console.error("Erro de tradução:", err);
-        setError('Não foi possível traduzir a definição.');
-        setTranslation(''); // Limpa a mensagem "A traduzir..."
+      } catch (error) {
+        console.error("Erro de tradução:", error);
+        setTranslation('Não foi possível traduzir a definição.');
       }
-    })();
-  }, [entry.strongs_def]); // Roda apenas quando a definição em inglês muda
+    };
 
-  // Procura por todas as referências da palavra na Bíblia (sem alterações)
+    translateDefinition();
+  }, [entry.strongs_def]);
+
+  // Procura por todas as referências da palavra na Bíblia
   const references = useMemo(() => {
     const found = [];
     const strongId = entry.strong_number;
@@ -70,7 +61,14 @@ const EntryDetailView = ({ entry, bibleData, onBack }) => {
       const strongRegex = new RegExp(`[<{]${strongId}[>}]`);
       if (verse.text && verse.text.match(strongRegex)) {
         const bookInfo = BOOKS.find(b => b.abbrev === verse.book_abbrev);
-        const almeidaVerse = almeidaRC.find(v => v.book_abbrev === verse.book_abbrev && v.chapter === verse.chapter && v.verse === verse.verse);
+        
+        // Agora, encontra o mesmo versículo na Almeida RC
+        const almeidaVerse = almeidaRC.find(v => 
+            v.book_abbrev === verse.book_abbrev && 
+            v.chapter === verse.chapter && 
+            v.verse === verse.verse
+        );
+
         found.push({
           key: `${verse.book_abbrev}-${verse.chapter}-${verse.verse}`,
           ref: `${bookInfo ? bookInfo.name_pt : verse.book_abbrev} ${verse.chapter}:${verse.verse}`,
@@ -94,10 +92,8 @@ const EntryDetailView = ({ entry, bibleData, onBack }) => {
         <p className="text-lg text-slate-600">{entry.translit}</p>
         <p className="mt-1 font-semibold text-blue-700">{entry.strong_number}</p>
         <p className="mt-4 text-gray-700 leading-relaxed text-lg">{entry.strongs_def}</p>
-        {/* Exibe a tradução ou a mensagem de erro */}
-        <div className="mt-2 text-blue-800 bg-blue-50 p-3 rounded-md leading-relaxed text-lg italic">
-            {error || translation}
-        </div>
+        {/* Exibe a tradução */}
+        <p className="mt-2 text-blue-800 bg-blue-50 p-2 rounded-md leading-relaxed text-lg italic">{translation}</p>
       </div>
 
       <div>
@@ -116,7 +112,7 @@ const EntryDetailView = ({ entry, bibleData, onBack }) => {
   );
 };
 
-// --- Componente Principal do Dicionário (sem alterações) ---
+// --- Componente Principal do Dicionário (com paginação e busca inteligente) ---
 function Dictionary({ greekDict, hebrewDict, bibleData }) {
   const [term, setTerm] = useState('');
   const [searchIn, setSearchIn] = useState('greek');
