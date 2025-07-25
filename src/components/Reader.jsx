@@ -1,15 +1,27 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BOOKS, VERSIONS } from '../data';
 
-// --- Sub-componente para o Pop-up de Compartilhamento ---
+// --- Sub-componente para o Pop-up de Partilha ---
 const SharePopup = ({ text, position, onShare }) => {
   if (!text) return null;
+
+  // Função para evitar que o clique no botão desfaça a seleção de texto
+  const handleMouseDown = (e) => {
+    e.preventDefault(); 
+  };
+  
   return (
     <div
-      className="absolute bg-slate-800 text-white px-3 py-1 rounded-lg shadow-lg"
+      className="absolute z-10"
       style={{ left: position.x, top: position.y, transform: 'translate(-50%, -120%)' }}
+      onMouseDown={handleMouseDown}
     >
-      <button onClick={onShare} className="font-semibold">Compartilhar</button>
+      <button 
+        onClick={onShare} 
+        className="bg-slate-800 text-white px-4 py-2 rounded-lg shadow-lg font-semibold text-sm hover:bg-slate-700 transition-colors"
+      >
+        Partilhar
+      </button>
     </div>
   );
 };
@@ -22,7 +34,7 @@ function Reader({ bibleData }) {
   const [book, setBook] = useState('gn');
   const [chapter, setChapter] = useState('1');
   
-  // Estados para o pop-up de compartilhamento
+  // Estados para o pop-up de partilha
   const [selectedText, setSelectedText] = useState('');
   const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
   const readerRef = useRef(null); // Ref para a área de leitura
@@ -45,21 +57,25 @@ function Reader({ bibleData }) {
 
   // Lógica para capturar a seleção de texto
   const handleMouseUp = () => {
-    const selection = window.getSelection();
-    const text = selection.toString().trim();
-    if (text.length > 0) {
-      const range = selection.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-      const containerRect = readerRef.current.getBoundingClientRect();
-      
-      setSelectedText(text);
-      setPopupPosition({
-        x: rect.left + rect.width / 2 - containerRect.left,
-        y: rect.top - containerRect.top,
-      });
-    } else {
-      setSelectedText('');
-    }
+    // Timeout para garantir que o evento de clique não limpe a seleção antes de ser processado
+    setTimeout(() => {
+        const selection = window.getSelection();
+        const text = selection.toString().trim();
+        
+        if (text.length > 0) {
+          const range = selection.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          const containerRect = readerRef.current.getBoundingClientRect();
+          
+          setSelectedText(text);
+          setPopupPosition({
+            x: rect.left + rect.width / 2 - containerRect.left,
+            y: rect.top - containerRect.top,
+          });
+        } else {
+          setSelectedText('');
+        }
+    }, 10);
   };
 
   const handleShare = async () => {
@@ -70,11 +86,12 @@ function Reader({ bibleData }) {
       await navigator.clipboard.writeText(textToShare);
       alert('Texto copiado para a área de transferência!');
     }
-    setSelectedText(''); // Esconde o pop-up após compartilhar/copiar
+    setSelectedText(''); // Esconde o pop-up após partilhar/copiar
+    window.getSelection().removeAllRanges(); // Limpa a seleção azul
   };
 
   return (
-    <div className="space-y-6" onMouseUp={handleMouseUp} ref={readerRef}>
+    <div className="space-y-6 relative" onMouseUp={handleMouseUp} ref={readerRef}>
       <SharePopup text={selectedText} position={popupPosition} onShare={handleShare} />
       
       {/* Controles de Seleção */}

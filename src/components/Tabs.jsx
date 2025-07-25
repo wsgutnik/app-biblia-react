@@ -5,7 +5,7 @@ const TABS_CONFIG = [
   { id: 'search', label: 'Busca' },
   { id: 'dictionary', label: 'Dicionários' },
   { id: 'commentary', label: 'Comentários' },
-  { id: 'history', label: 'Histórico' }, // NOVO
+  { id: 'history', label: 'Histórico' }, // ADICIONADO DE VOLTA
 ];
 
 function Tabs({ activeTab, setActiveTab }) {
