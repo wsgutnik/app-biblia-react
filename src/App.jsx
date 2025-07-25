@@ -6,8 +6,8 @@ import Reader from './components/Reader';
 import Search from './components/Search';
 import Dictionary from './components/Dictionary';
 import Commentary from './components/Commentary';
-import VerseOfTheDay from './components/VerseOfTheDay';
-import StreakTracker from './components/StreakTracker'; // NOVO
+import History from './components/History';
+import VerseOfTheDay from './components/VerseOfTheDay'; // IMPORTADO DE VOLTA
 
 const loadScript = (src) => new Promise((resolve, reject) => {
     const script = document.createElement('script');
@@ -26,10 +26,11 @@ function App() {
   const [hebrewDict, setHebrewDict] = useState(null);
   const [commentaryData, setCommentaryData] = useState([]);
   const [activeTab, setActiveTab] = useState('reader');
+  const [initialChapter, setInitialChapter] = useState(null);
 
   useEffect(() => {
     const loadAllData = async () => {
-      // A lógica de carregamento permanece a mesma
+      // A lógica de carregamento de dados permanece a mesma
       const loadBibleVersion = (version) => new Promise((resolve, reject) => {
         Papa.parse(`/${version.id}.csv`, {
           download: true,
@@ -82,30 +83,52 @@ function App() {
     loadAllData();
   }, []);
 
-  if (isLoading) { /* ...código do loading sem alterações... */ }
-  if (error) { /* ...código de erro sem alterações... */ }
+  const handleNavigateFromHistory = (item) => {
+    setInitialChapter({ version: item.version, book: item.book, chapter: item.chapter });
+    setActiveTab('reader');
+  };
+
+  if (isLoading) {
+    return (
+        <div className="flex items-center justify-center h-screen bg-gray-100">
+            <div className="text-center">
+                <h1 className="text-2xl font-bold text-gray-800">{loadingMessage}</h1>
+                <p className="text-gray-600 mt-2">Isso pode levar alguns segundos...</p>
+            </div>
+        </div>
+    );
+  }
+
+  if (error) {
+     return (
+        <div className="flex items-center justify-center h-screen bg-gray-100">
+            <div className="text-center p-4 max-w-lg">
+                <h1 className="text-xl font-bold text-red-600">Erro Crítico ao Carregar Dados</h1>
+                <p className="font-mono bg-red-100 text-red-800 p-2 rounded mt-2 break-all">{error}</p>
+            </div>
+        </div>
+     );
+  }
   
   return (
     <div className="bg-slate-50 min-h-screen">
       <div className="max-w-5xl mx-auto p-4 sm:p-8">
-        <header className="mb-10 text-center relative"> {/* NOVO: Adicionado 'relative' */}
+        <header className="mb-10 text-center">
           <h1 className="text-4xl font-bold text-slate-900">Bíblia Sagrada</h1>
           <p className="text-lg text-slate-600 mt-2">Sua ferramenta de estudo das Escrituras.</p>
-          {/* NOVO: Ícone de Streak no canto superior direito */}
-          <div className="absolute top-0 right-0">
-            <StreakTracker />
-          </div>
         </header>
         
+        {/* VERSO DO DIA DE VOLTA AO TOPO */}
         <VerseOfTheDay bibleData={bibleData} />
         
         <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
         
         <main className="mt-8">
-          {activeTab === 'reader' && <Reader bibleData={bibleData} />}
+          {activeTab === 'reader' && <Reader bibleData={bibleData} initialChapter={initialChapter} />}
           {activeTab === 'search' && <Search bibleData={bibleData} />}
           {activeTab === 'dictionary' && <Dictionary greekDict={greekDict} hebrewDict={hebrewDict} bibleData={bibleData} />}
           {activeTab === 'commentary' && <Commentary commentaryData={commentaryData} bibleData={bibleData} />}
+          {activeTab === 'history' && <History onNavigate={handleNavigateFromHistory} />}
         </main>
       </div>
     </div>

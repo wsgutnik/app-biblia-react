@@ -21,6 +21,7 @@ const ShareIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>
 );
 
+// NOVO: Ícone de seta para minimizar/expandir
 const MinimizeIcon = ({ isMinimized }) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-300" style={{ transform: isMinimized ? 'rotate(180deg)' : 'rotate(0deg)' }}>
         <polyline points="18 15 12 9 6 15"></polyline>
@@ -33,7 +34,7 @@ function VerseOfTheDay({ bibleData }) {
     const [version, setVersion] = useState('almeida_rc');
     const [isLoved, setIsLoved] = useState(false);
     const [copySuccess, setCopySuccess] = useState('');
-    // NOVO: Estado para controlar se o cartão está minimizado
+    // NOVO: Estado para controlar se o cartão está minimizado, lendo o valor salvo
     const [isMinimized, setIsMinimized] = useState(JSON.parse(localStorage.getItem('isVerseMinimized')) || false);
 
     const dayOfYear = useMemo(() => {
@@ -63,12 +64,13 @@ function VerseOfTheDay({ bibleData }) {
         setIsLoved(!!lovedVerses[dayOfYear]);
     }, [version, bibleData, dayOfYear]);
 
-    // NOVO: Efeito para salvar o estado minimizado
+    // NOVO: Efeito para salvar o estado minimizado sempre que ele muda
     useEffect(() => {
         localStorage.setItem('isVerseMinimized', JSON.stringify(isMinimized));
     }, [isMinimized]);
 
-    const handleLoveClick = () => {
+    const handleLoveClick = (e) => {
+        e.stopPropagation(); // Evita que o clique minimize o cartão
         const lovedVerses = JSON.parse(localStorage.getItem('lovedVerses')) || {};
         const newLovedState = !isLoved;
         if (newLovedState) {
@@ -80,7 +82,8 @@ function VerseOfTheDay({ bibleData }) {
         setIsLoved(newLovedState);
     };
 
-    const handleShareClick = async () => {
+    const handleShareClick = async (e) => {
+        e.stopPropagation(); // Evita que o clique minimize o cartão
         if (!verseData) return;
         const textToShare = `"${verseData.text}" (${verseData.reference})`;
         if (navigator.share) {
@@ -95,8 +98,11 @@ function VerseOfTheDay({ bibleData }) {
     return (
         <div className="mb-12">
             <div className="bg-white rounded-xl shadow-lg border border-slate-200">
-                {/* NOVO: Cabeçalho com o botão de minimizar */}
-                <div className="flex justify-between items-center p-4 cursor-pointer" onClick={() => setIsMinimized(!isMinimized)}>
+                {/* NOVO: Cabeçalho clicável com o botão de minimizar */}
+                <div 
+                    className="flex justify-between items-center p-4 cursor-pointer" 
+                    onClick={() => setIsMinimized(!isMinimized)}
+                >
                     <h2 className="text-sm font-bold uppercase text-blue-600 tracking-widest">Verso do Dia</h2>
                     <button className="text-slate-400 hover:text-blue-600">
                        <MinimizeIcon isMinimized={isMinimized} />
@@ -114,7 +120,7 @@ function VerseOfTheDay({ bibleData }) {
                                 <p className="font-bold text-slate-500 mt-6 text-xl">— {verseData.reference}</p>
                                 
                                 <div className="flex items-center justify-center gap-4 mt-8 pt-6 border-t border-slate-200">
-                                    <select value={version} onChange={e => setVersion(e.target.value)} className="w-full max-w-xs p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500">
+                                    <select value={version} onChange={e => setVersion(e.target.value)} onClick={e => e.stopPropagation()} className="w-full max-w-xs p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500">
                                         {VERSIONS.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
                                     </select>
                                     <button onClick={handleLoveClick} className="p-2 rounded-full hover:bg-red-100 transition-colors" title="Amar">
@@ -137,4 +143,3 @@ function VerseOfTheDay({ bibleData }) {
 }
 
 export default VerseOfTheDay;
-
