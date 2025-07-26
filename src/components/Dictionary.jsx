@@ -156,7 +156,7 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
 
   const paginatedResults = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return results.slice(startIndex, startIndex, startIndex + ITEMS_PER_PAGE);
+    return results.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [currentPage, results]);
 
   // ... (O resto do componente Dictionary que não foi fornecido)
