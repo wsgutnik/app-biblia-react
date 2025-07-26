@@ -9,7 +9,7 @@ function Search({ bibleData }) {
     const handleSearch = (e) => {
         e.preventDefault();
         if (!term) return;
-        const searchResults = bibleData[version]?.filter(v => 
+        const searchResults = (bibleData[version] || []).filter(v =>
             v.text && v.text.toLowerCase().includes(term.toLowerCase())
         );
         const formatted = searchResults.map(v => {
