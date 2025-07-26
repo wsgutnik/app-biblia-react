@@ -13,61 +13,31 @@ const EntryDetailView = ({ entry, bibleData, onBack }) => {
         return;
       }
       try {
-        const prompt = `Traduza o seguinte texto teológico do inglês para o português brasileiro, mantendo o sentido original de forma concisa: "${entry.strongs_def}"`;
-        
-        // Chamada para a API da Máquina (Gemini)
-        const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-        const payload = { contents: chatHistory };
-        const apiKey = ""; // A chave é fornecida pelo ambiente
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+        const response = await fetch("https://libretranslate.de/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            q: entry.strongs_def,
+            source: "en",
+            target: "pt",
+            format: "text"
+          })
         });
 
         if (!response.ok) {
-            throw new Error(`Erro na API: ${response.statusText}`);
+          throw new Error(`Erro na API: ${response.statusText}`);
         }
 
         const result = await response.json();
-        
-        if (result.candidates && result.candidates[0]?.content?.parts[0]?.text) {
-            setTranslation(result.candidates[0].content.parts[0].text);
+
+        if (result && result.translatedText) {
+          setTranslation(result.translatedText);
         } else {
-            throw new Error('Resposta da API inválida.');
-        try {
-          const response = await fetch("https://libretranslate.de/translate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              q: entry.strongs_def,
-              source: "en",
-              target: "pt",
-              format: "text"
-            })
-          });
-
-          if (!response.ok) {
-            throw new Error(`Erro na API: ${response.statusText}`);
-          }
-
-          const result = await response.json();
-
-          if (result && result.translatedText) {
-            setTranslation(result.translatedText);
-          } else {
-            throw new Error("Resposta da API inválida.");
-          }
-        } catch (error) {
-          console.error("Erro de tradução:", error);
-          setTranslation("Não foi possível traduzir a definição.");
+          throw new Error("Resposta da API inválida.");
         }
-
       } catch (error) {
         console.error("Erro de tradução:", error);
-        setTranslation('Não foi possível traduzir a definição.');
+        setTranslation("Não foi possível traduzir a definição.");
       }
     };
 
@@ -94,7 +64,45 @@ const EntryDetailView = ({ entry, bibleData, onBack }) => {
             v.chapter === verse.chapter && 
             v.verse === verse.verse
         );
-@@ -104,51 +100,56 @@ const EntryDetailView = ({ entry, bibleData, onBack }) => {
+
+        if (bookInfo && almeidaVerse) {
+          found.push({
+            ref: `${bookInfo.name} ${verse.chapter}:${verse.verse}`,
+            text_kjv: verse.text.replace(/<[^>]*>/g, ''), // Limpa tags da KJV
+            text_arc: almeidaVerse.text
+          });
+        }
+      }
+    }
+    return found;
+  }, [entry.strong_number, bibleData]);
+
+  return (
+    <div className="p-4 bg-white rounded-lg shadow-md animate-fade-in">
+      <button onClick={onBack} className="mb-4 text-blue-600 hover:underline">← Voltar</button>
+      
+      <div className="mb-6">
+        <h2 className="text-3xl font-bold text-slate-800">{entry.lemma}</h2>
+        <p className="text-lg text-slate-500">{entry.translit}</p>
+        <p className="text-sm text-slate-400">Strongs: {entry.strong_number}</p>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <h3 className="font-bold text-lg text-slate-700">Definição (Strongs):</h3>
+          <p className="text-slate-600 italic pl-4 border-l-2 border-slate-200">{entry.strongs_def}</p>
+        </div>
+        <div>
+          <h3 className="font-bold text-lg text-blue-700">Tradução (IA):</h3>
+          <p className="text-blue-600 pl-4 border-l-2 border-blue-200">{translation}</p>
+        </div>
+      </div>
+      
+      <div className="mt-8">
+        <h3 className="font-bold text-xl text-slate-800 mb-4">Ocorrências na Bíblia ({references.length})</h3>
+        <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+          {references.map((ref, index) => (
+            <div key={index} className="border-b pb-2">
               <p className="font-semibold text-slate-700">{ref.ref}</p>
               <p className="text-slate-600 pl-4 border-l-2 border-slate-200"> <span className="font-bold text-xs text-slate-400">KJV:</span> {ref.text_kjv}</p>
               <p className="text-blue-600 pl-4 border-l-2 border-blue-200"> <span className="font-bold text-xs text-blue-400">ARC:</span> {ref.text_arc}</p>
@@ -120,8 +128,6 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
   const processedDictionary = useMemo(() => {
     const dict = searchIn === 'greek' ? greekDict : hebrewDict;
     if (!dict) return [];
-    return Object.entries(dict).map(([strong_number, entryData]) => ({ ...entryData, strong_number }));
-
     return Object.entries(dict).map(([strong_number, entryData]) => ({
       ...entryData,
       strong_number,
@@ -150,5 +156,8 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
 
   const paginatedResults = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return results.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    return results.slice(startIndex, startIndex, startIndex + ITEMS_PER_PAGE);
   }, [currentPage, results]);
+
+  // ... (O resto do componente Dictionary que não foi fornecido)
+}
