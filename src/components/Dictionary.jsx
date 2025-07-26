@@ -11,38 +11,34 @@ const EntryDetailView = ({ entry, bibleData, onBack }) => {
       if (!entry.strongs_def) {
         setTranslation('Definição não disponível.');
         return;
-      }
-      try {
-        const prompt = `Traduza o seguinte texto teológico do inglês para o português brasileiro, mantendo o sentido original de forma concisa: "${entry.strongs_def}"`;
-        
-        // Chamada para a API da Máquina (Gemini)
-        const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-        const payload = { contents: chatHistory };
-        const apiKey = ""; // A chave é fornecida pelo ambiente
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        }
+        try {
+          const response = await fetch("https://libretranslate.de/translate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              q: entry.strongs_def,
+              source: "en",
+              target: "pt",
+              format: "text"
+            })
+          });
 
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
+          if (!response.ok) {
             throw new Error(`Erro na API: ${response.statusText}`);
-        }
+          }
 
-        const result = await response.json();
-        
-        if (result.candidates && result.candidates[0]?.content?.parts[0]?.text) {
-            setTranslation(result.candidates[0].content.parts[0].text);
-        } else {
-            throw new Error('Resposta da API inválida.');
-        }
+          const result = await response.json();
 
-      } catch (error) {
-        console.error("Erro de tradução:", error);
-        setTranslation('Não foi possível traduzir a definição.');
-      }
+          if (result && result.translatedText) {
+            setTranslation(result.translatedText);
+          } else {
+            throw new Error("Resposta da API inválida.");
+          }
+        } catch (error) {
+          console.error("Erro de tradução:", error);
+          setTranslation("Não foi possível traduzir a definição.");
+        }
     };
 
     translateDefinition();
@@ -126,7 +122,12 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
   const processedDictionary = useMemo(() => {
     const dict = searchIn === 'greek' ? greekDict : hebrewDict;
     if (!dict) return [];
-    return Object.entries(dict).map(([strong_number, entryData]) => ({ ...entryData, strong_number }));
+
+    return Object.entries(dict).map(([strong_number, entryData]) => ({
+      ...entryData,
+      strong_number,
+      translit: entryData.translit || entryData.xlit || ''
+    }));
   }, [searchIn, greekDict, hebrewDict]);
 
   const updateResults = (searchTerm = '') => {
