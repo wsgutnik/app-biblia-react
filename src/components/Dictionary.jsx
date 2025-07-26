@@ -1,9 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { BOOKS } from '../data';
+import { BOOKS, VERSIONS } from '../data';
 
 // --- Sub-componente para a nova página de detalhes da palavra ---
 const EntryDetailView = ({ entry, bibleData, onBack }) => {
   const [translation, setTranslation] = useState('Traduzindo...');
+  const [selectedVersion, setSelectedVersion] = useState('almeida_rc');
+  const selectedVersionName = useMemo(
+    () => VERSIONS.find(v => v.id === selectedVersion)?.name || selectedVersion,
+    [selectedVersion]
+  );
 
   // Efeito para traduzir a definição quando a palavra muda
   useEffect(() => {
@@ -49,33 +54,33 @@ const EntryDetailView = ({ entry, bibleData, onBack }) => {
     const found = [];
     const strongId = entry.strong_number;
     const kjvStrongs = bibleData['kjv_strongs'];
-    const almeidaRC = bibleData['almeida_rc'];
+    const versionData = bibleData[selectedVersion];
 
-    if (!strongId || !kjvStrongs || !almeidaRC) return [];
+    if (!strongId || !kjvStrongs || !versionData) return [];
 
     for (const verse of kjvStrongs) {
       const strongRegex = new RegExp(`[<{]${strongId}[>}]`);
       if (verse.text && verse.text.match(strongRegex)) {
         const bookInfo = BOOKS.find(b => b.abbrev === verse.book_abbrev);
-        
-        // Agora, encontra o mesmo versículo na Almeida RC
-        const almeidaVerse = almeidaRC.find(v => 
-            v.book_abbrev === verse.book_abbrev && 
-            v.chapter === verse.chapter && 
+
+        // Encontra o mesmo versículo na versão selecionada
+        const selectedVerse = versionData.find(v =>
+            v.book_abbrev === verse.book_abbrev &&
+            v.chapter === verse.chapter &&
             v.verse === verse.verse
         );
 
-        if (bookInfo && almeidaVerse) {
+        if (bookInfo && selectedVerse) {
           found.push({
-            ref: `${bookInfo.name} ${verse.chapter}:${verse.verse}`,
+            ref: `${bookInfo.name_pt || bookInfo.name} ${verse.chapter}:${verse.verse}`,
             text_kjv: verse.text.replace(/<[^>]*>/g, ''), // Limpa tags da KJV
-            text_arc: almeidaVerse.text
+            text_version: selectedVerse.text
           });
         }
       }
     }
     return found;
-  }, [entry.strong_number, bibleData]);
+  }, [entry.strong_number, bibleData, selectedVersion]);
 
   return (
     <div className="p-4 bg-white rounded-lg shadow-md animate-fade-in">
@@ -97,15 +102,24 @@ const EntryDetailView = ({ entry, bibleData, onBack }) => {
           <p className="text-blue-600 pl-4 border-l-2 border-blue-200">{translation}</p>
         </div>
       </div>
-      
+
       <div className="mt-8">
+        <select
+          value={selectedVersion}
+          onChange={e => setSelectedVersion(e.target.value)}
+          className="mb-4 p-2 border border-gray-300 rounded-md"
+        >
+          {VERSIONS.map(v => (
+            <option key={v.id} value={v.id}>{v.name}</option>
+          ))}
+        </select>
         <h3 className="font-bold text-xl text-slate-800 mb-4">Ocorrências na Bíblia ({references.length})</h3>
         <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
           {references.map((ref, index) => (
             <div key={index} className="border-b pb-2">
               <p className="font-semibold text-slate-700">{ref.ref}</p>
               <p className="text-slate-600 pl-4 border-l-2 border-slate-200"> <span className="font-bold text-xs text-slate-400">KJV:</span> {ref.text_kjv}</p>
-              <p className="text-blue-600 pl-4 border-l-2 border-blue-200"> <span className="font-bold text-xs text-blue-400">ARC:</span> {ref.text_arc}</p>
+              <p className="text-blue-600 pl-4 border-l-2 border-blue-200"> <span className="font-bold text-xs text-blue-400">{selectedVersionName}:</span> {ref.text_version}</p>
             </div>
           ))}
         </div>
