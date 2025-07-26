@@ -156,8 +156,105 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
 
   const paginatedResults = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return results.slice(startIndex, startIndex, startIndex + ITEMS_PER_PAGE);
+    return results.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [currentPage, results]);
 
-  // ... (O resto do componente Dictionary que não foi fornecido)
+  if (selectedEntry) {
+    return (
+      <EntryDetailView
+        entry={selectedEntry}
+        bibleData={bibleData}
+        onBack={() => setSelectedEntry(null)}
+      />
+    );
+  }
+
+  const totalPages = Math.ceil(results.length / ITEMS_PER_PAGE) || 1;
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="bg-white p-6 rounded-xl shadow-lg border border-slate-200">
+        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4">
+          <input
+            type="text"
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            placeholder="Buscar palavra ou número Strong"
+            className="grow p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500"
+          />
+          <select
+            value={searchIn}
+            onChange={(e) => setSearchIn(e.target.value)}
+            className="w-full sm:w-auto p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="greek">Grego</option>
+            <option value="hebrew">Hebraico</option>
+          </select>
+          <button
+            type="submit"
+            className="inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-semibold rounded-lg shadow-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Buscar
+          </button>
+        </form>
+      </div>
+
+      {results.length > 0 && (
+        <div className="bg-white rounded-xl shadow-lg border border-slate-200">
+          <div className="p-4 border-b border-slate-200">
+            <p className="text-sm font-medium text-gray-600">
+              {results.length} resultados encontrados.
+            </p>
+          </div>
+          <ul className="divide-y divide-slate-200 max-h-128 overflow-y-auto">
+            {paginatedResults.map((entry) => (
+              <li
+                key={entry.strong_number}
+                className="p-4 hover:bg-slate-50 cursor-pointer"
+                onClick={() => setSelectedEntry(entry)}
+              >
+                <p className="font-bold text-blue-700">
+                  {entry.lemma} ({entry.translit})
+                </p>
+                <p className="text-sm text-slate-500">
+                  Strongs: {entry.strong_number}
+                </p>
+                {entry.strongs_def && (
+                  <p className="mt-1 text-gray-700 leading-relaxed">
+                    {entry.strongs_def}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+
+          {results.length > ITEMS_PER_PAGE && (
+            <div className="flex items-center justify-between p-4">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 rounded-lg text-sm font-semibold bg-slate-100 disabled:opacity-50"
+              >
+                Anterior
+              </button>
+              <span className="text-sm text-slate-600">
+                Página {currentPage} de {totalPages}
+              </span>
+              <button
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 rounded-lg text-sm font-semibold bg-slate-100 disabled:opacity-50"
+              >
+                Próxima
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
+
+export default Dictionary;
