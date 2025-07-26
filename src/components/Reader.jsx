@@ -27,17 +27,41 @@ const SharePopup = ({ text, position, onShare }) => {
 };
 
 
-function Reader({ bibleData }) {
+function Reader({ bibleData, initialChapter, setInitialChapter }) {
   const [viewMode, setViewMode] = useState('single'); // 'single' ou 'compare'
   const [version1, setVersion1] = useState('almeida_rc');
   const [version2, setVersion2] = useState('kjv');
   const [book, setBook] = useState('gn');
   const [chapter, setChapter] = useState('1');
-  
+
   // Estados para o pop-up de partilha
   const [selectedText, setSelectedText] = useState('');
   const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
   const readerRef = useRef(null); // Ref para a área de leitura
+
+  useEffect(() => {
+    if (initialChapter) {
+      setBook(initialChapter.bookAbbrev);
+      setChapter(String(initialChapter.chapter));
+      setInitialChapter(null);
+    }
+  }, [initialChapter, setInitialChapter]);
+
+  useEffect(() => {
+    const entry = {
+      bookAbbrev: book,
+      bookName: BOOKS.find((b) => b.abbrev === book).name_pt,
+      chapter,
+      timestamp: Date.now(),
+    };
+    let history = JSON.parse(localStorage.getItem('readingHistory')) || [];
+    history = history.filter(
+      (h) => !(h.bookAbbrev === book && String(h.chapter) === String(chapter))
+    );
+    history.unshift(entry);
+    if (history.length > 50) history = history.slice(0, 50);
+    localStorage.setItem('readingHistory', JSON.stringify(history));
+  }, [book, chapter]);
 
   const selectedBookInfo = useMemo(() => BOOKS.find((b) => b.abbrev === book), [book]);
   
