@@ -31,3 +31,22 @@ npm run dev      # ambiente de desenvolvimento com HMR
 npm run build    # gera a pasta dist/
 npm run preview  # serve o build localmente
 ```
+
+## Backend API (Node + SQLite)
+
+Um microservidor Express em `server/` lê os dicionários Strong's (grego e hebraico) dos arquivos JSON em `public/` e popula automaticamente um banco SQLite na primeira execução.
+
+```bash
+cd server
+npm install            # primeira vez
+cp .env.example .env   # opcionalmente ajuste PORT/DATABASE_PATH
+npm start              # sobe o servidor em http://localhost:4000
+```
+
+Rotas disponíveis:
+
+- `GET /health` – verificação simples
+- `GET /entries?q=agape&language=greek&limit=10` – busca leve por número, lema ou transliteração
+- `GET /entries/:number` – obtém um verbete completo (ex.: `/entries/G25`)
+
+No front defina `VITE_API_URL` (vide `.env.example`) para apontar para a URL base do backend. Depois disso, os fetches podem usar `fetch(\`\${import.meta.env.VITE_API_URL}/entries/G25\`)`.
