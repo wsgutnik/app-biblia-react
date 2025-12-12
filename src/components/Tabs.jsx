@@ -5,6 +5,7 @@ const TABS_CONFIG = [
   { id: 'search', label: 'Busca' },
   { id: 'dictionary', label: 'Dicionários' },
   { id: 'commentary', label: 'Comentários' },
+  { id: 'quiz', label: 'Quiz' },
   { id: 'history', label: 'Histórico' }, // ADICIONADO DE VOLTA
   { id: 'profile', label: 'Perfil' },
 ];

@@ -4,7 +4,7 @@ import { VERSIONS, BOOKS } from './data';
 import Tabs from './components/Tabs';
 import VerseOfTheDay from './components/VerseOfTheDay';
 import Streak from './components/Streak';
-import AuthActions from './components/AuthActions';
+import HeroAuthPanel from './components/HeroAuthPanel';
 import { loadStrongs } from './utils/loadStrongsdict';
 import { isAuth0Configured } from './config/auth0.js';
 
@@ -14,6 +14,7 @@ const Dictionary = lazy(() => import('./components/Dictionary'));
 const Commentary = lazy(() => import('./components/Commentary'));
 const History = lazy(() => import('./components/History'));
 const Profile = lazy(() => import('./components/Profile'));
+const Quiz = lazy(() => import('./components/Quiz'));
 
 const loadScript = (src) => new Promise((resolve, reject) => {
     const script = document.createElement('script');
@@ -123,8 +124,8 @@ function App() {
               <h1 className="text-4xl font-extrabold text-brand-900 mt-2">Bíblia Sagrada</h1>
               <p className="text-base text-slate-600 mt-2">Uma experiência moderna de leitura, estudo e pesquisa bíblica.</p>
             </div>
-            <div className="self-center sm:self-auto flex flex-col items-center sm:items-end gap-4">
-              {isAuth0Configured && <AuthActions />}
+            <div className="self-center sm:self-auto flex flex-col items-center sm:items-end gap-4 w-full sm:w-auto">
+              {isAuth0Configured && <HeroAuthPanel />}
               <Streak />
             </div>
           </div>
@@ -153,6 +154,8 @@ function App() {
                   return <Dictionary greekDict={dicts.greek} hebrewDict={dicts.hebrew} bibleData={bibleData} />;
                 case 'commentary':
                   return <Commentary commentaryData={commentaryData} bibleData={bibleData} />;
+                case 'quiz':
+                  return <Quiz />;
                 case 'history':
                   return <History onNavigate={handleNavigateFromHistory} />;
                 case 'profile':
