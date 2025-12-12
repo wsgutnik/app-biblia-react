@@ -32,15 +32,15 @@ npm run build    # gera a pasta dist/
 npm run preview  # serve o build localmente
 ```
 
-## Backend API (Node + SQLite)
+## Backend API (Node + Supabase/Postgres)
 
-Um microservidor Express em `server/` lê os dicionários Strong's (grego e hebraico) dos arquivos JSON em `public/` e popula automaticamente um banco SQLite na primeira execução.
+Um microservidor Express em `server/` lê os dicionários Strong's (grego e hebraico) dos arquivos JSON em `public/` e povoa uma tabela `entries` em Postgres (Supabase) sempre que o banco está vazio.
 
 ```bash
 cd server
 npm install            # primeira vez
-cp .env.example .env   # opcionalmente ajuste PORT/DATABASE_PATH
-npm start              # sobe o servidor em http://localhost:4000
+cp .env.example .env   # preencha DATABASE_URL com o connection string do Supabase
+npm start              # sobe o servidor em http://localhost:4000 (usa o banco remoto)
 ```
 
 Rotas disponíveis:
@@ -58,10 +58,11 @@ O projeto já inclui um `render.yaml` para publicar o backend no plano gratuito 
 1. Crie uma conta (ou faça login) no Render e autorize o acesso ao seu repositório do GitHub.
 2. Clique em **New > Blueprint** e selecione este repositório. O Render detectará o `render.yaml`.
 3. Dê um nome para o serviço (por exemplo `strongs-api`) e confirme. O build executará `cd server && npm install` e o start `cd server && npm start`.
-4. Após o deploy, copie a URL pública (ex.: `https://strongs-api.onrender.com`) e atualize o front-end (`.env.local`) com `VITE_API_URL` apontando para esse endereço.
+4. Antes ou depois de finalizar o deploy, defina a variável `DATABASE_URL` no painel do Render (Settings → Environment). Use o mesmo valor que colocou no `server/.env`.
+5. Após o deploy, copie a URL pública (ex.: `https://strongs-api.onrender.com`) e atualize o front-end (`.env.local`) com `VITE_API_URL` apontando para esse endereço.
 
 Observações:
 
-- O SQLite é reconstruído a cada deploy usando os arquivos JSON dos dicionários, então não há dependência de um banco externo.
-- Caso precise definir outra localização do banco, use a variável `DATABASE_PATH` (Render → serviço → Environment → Add Env Var).
+- O Supabase/Postgres precisa estar criado antes do deploy. O seed roda automaticamente quando a tabela `entries` está vazia.
+- A variável `DATABASE_URL` segue o formato `postgresql://postgres.<project-ref>:<senha>@aws-0-us-east-1.pooler.supabase.com:5432/postgres`.
 - O plano gratuito hiberna após alguns minutos sem uso; a primeira requisição pode levar alguns segundos enquanto o container desperta.

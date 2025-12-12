@@ -1,30 +1,41 @@
 const fs = require('fs');
 const path = require('path');
-const Database = require('better-sqlite3');
+const { Pool } = require('pg');
 
 const rootDir = path.resolve(__dirname, '..');
 const publicDir = path.join(rootDir, 'public');
-const defaultDbPath = path.join(__dirname, 'strongs.db');
 
-const dbPath = process.env.DATABASE_PATH
-  ? path.resolve(rootDir, process.env.DATABASE_PATH)
-  : defaultDbPath;
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL is not set. Configure server/.env with your Supabase connection string.');
+}
 
-const db = new Database(dbPath);
-db.pragma('journal_mode = WAL');
+const sslEnabled = process.env.DATABASE_SSL !== 'false';
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: sslEnabled ? { rejectUnauthorized: false } : false
+});
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS entries (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    number TEXT UNIQUE,
-    lemma TEXT,
-    translit TEXT,
-    derivation TEXT,
-    kjv_def TEXT,
-    strongs_def TEXT,
-    language TEXT
-  );
-`);
+pool.on('error', (err) => {
+  console.error('Unexpected PostgreSQL error', err);
+});
+
+async function ensureSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS entries (
+      number TEXT PRIMARY KEY,
+      lemma TEXT,
+      translit TEXT,
+      derivation TEXT,
+      kjv_def TEXT,
+      strongs_def TEXT,
+      language TEXT
+    );
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS entries_language_idx ON entries(language);
+  `);
+}
 
 function readDictionary(fileName) {
   const filePath = path.join(publicDir, fileName);
@@ -33,8 +44,8 @@ function readDictionary(fileName) {
     return null;
   }
 
-  const raw = fs.readFileSync(filePath, 'utf8');
   try {
+    const raw = fs.readFileSync(filePath, 'utf8');
     return JSON.parse(raw);
   } catch (err) {
     console.error(`Failed to parse JSON for ${fileName}:`, err.message);
@@ -42,15 +53,9 @@ function readDictionary(fileName) {
   }
 }
 
-function seedFromDictionary(fileName, language) {
+async function seedFromDictionary(client, fileName, language) {
   const dictionary = readDictionary(fileName);
   if (!dictionary) return 0;
-
-  const insert = db.prepare(`
-    INSERT OR IGNORE INTO entries
-    (number, lemma, translit, derivation, kjv_def, strongs_def, language)
-    VALUES (@number, @lemma, @translit, @derivation, @kjv_def, @strongs_def, @language)
-  `);
 
   const rows = Object.entries(dictionary).map(([number, entry]) => ({
     number,
@@ -62,25 +67,77 @@ function seedFromDictionary(fileName, language) {
     language
   }));
 
-  const insertMany = db.transaction((items) => items.forEach((item) => insert.run(item)));
-  insertMany(rows);
-  return rows.length;
-}
+  if (!rows.length) return 0;
 
-function seedDatabase() {
-  const { count } = db.prepare('SELECT COUNT(*) as count FROM entries').get();
-  if (count > 0) {
-    return count;
+  const chunkSize = 500;
+  let processed = 0;
+
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const chunk = rows.slice(i, i + chunkSize);
+    const values = [];
+    const placeholders = chunk.map((item, idx) => {
+      const base = idx * 7;
+      values.push(
+        item.number,
+        item.lemma,
+        item.translit,
+        item.derivation,
+        item.kjv_def,
+        item.strongs_def,
+        item.language
+      );
+      return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7})`;
+    });
+
+    await client.query(
+      `
+        INSERT INTO entries
+          (number, lemma, translit, derivation, kjv_def, strongs_def, language)
+        VALUES ${placeholders.join(',')}
+        ON CONFLICT (number) DO UPDATE SET
+          lemma = EXCLUDED.lemma,
+          translit = EXCLUDED.translit,
+          derivation = EXCLUDED.derivation,
+          kjv_def = EXCLUDED.kjv_def,
+          strongs_def = EXCLUDED.strongs_def,
+          language = EXCLUDED.language;
+      `,
+      values
+    );
+
+    processed += chunk.length;
   }
 
-  const greek = seedFromDictionary('strongs-greek-dictionary.json', 'greek');
-  const hebrew = seedFromDictionary('strongs-hebrew-dictionary.json', 'hebrew');
-  const total = (greek || 0) + (hebrew || 0);
-  console.log(`Seeded ${total} Strong's entries into ${dbPath}`);
-  return total;
+  return processed;
+}
+
+async function seedDatabase() {
+  await ensureSchema();
+
+  const { rows } = await pool.query('SELECT COUNT(*)::int AS count FROM entries');
+  if (rows[0].count > 0) {
+    return rows[0].count;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const greek = await seedFromDictionary(client, 'strongs-greek-dictionary.json', 'greek');
+    const hebrew = await seedFromDictionary(client, 'strongs-hebrew-dictionary.json', 'hebrew');
+    await client.query('COMMIT');
+    const total = (greek || 0) + (hebrew || 0);
+    console.log(`Seeded ${total} Strong's entries into Supabase`);
+    return total;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Failed to seed database:', err.message);
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 module.exports = {
-  db,
+  pool,
   seedDatabase
 };
