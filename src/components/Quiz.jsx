@@ -1,89 +1,185 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import Papa from 'papaparse';
 
-const QUIZ_BANK = [
-  {
-    id: 'genesis_creation',
-    title: 'Gênesis 1',
-    question: 'Qual frase inicia a narrativa bíblica em Gênesis 1:1?',
-    options: [
-      'No princípio criou Deus o céu e a terra.',
-      'No princípio era o Verbo.',
-      'Bem-aventurados os puros de coração.',
-      'No começo Deus formou o homem do pó.'
-    ],
-    answerIndex: 0,
-    explanation: 'Gênesis 1:1 afirma: "No princípio criou Deus os céus e a terra."'
-  },
-  {
-    id: 'salmo_23',
-    title: 'Salmo 23',
-    question: 'Quem é descrito como o pastor no Salmo 23?',
-    options: [
-      'Moisés',
-      'O Senhor',
-      'Davi',
-      'Jacó'
-    ],
-    answerIndex: 1,
-    explanation: 'O salmista declara: "O Senhor é o meu pastor; nada me faltará."'
-  },
-  {
-    id: 'acts_pentecost',
-    title: 'Atos 2',
-    question: 'Qual evento marca o dia de Pentecostes em Atos 2?',
-    options: [
-      'A conversão de Paulo',
-      'A eleição de Matias',
-      'A descida do Espírito Santo',
-      'A cura do paralítico'
-    ],
-    answerIndex: 2,
-    explanation: 'Em Atos 2 o Espírito Santo desce sobre os discípulos, iniciando a Igreja.'
-  }
-];
+const CSV_PATH = '/100_bible_trivia_rewritten.csv';
+const STORAGE_KEY = 'quiz_progress_v1';
+const ANSWER_MAP = { A: 0, B: 1, C: 2, D: 3 };
 
 function Quiz() {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState('Todas');
+  const [currentQuestion, setCurrentQuestion] = useState(null);
   const [selectedOption, setSelectedOption] = useState(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [progress, setProgress] = useState({ correct: 0, total: 0 });
 
-  const currentQuiz = useMemo(() => QUIZ_BANK[currentIndex], [currentIndex]);
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        setProgress(JSON.parse(stored));
+      }
+    } catch {
+      // ignore parsing errors
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+  }, [progress]);
+
+  useEffect(() => {
+    setLoading(true);
+    Papa.parse(CSV_PATH, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const formatted = results.data
+          .map((row, idx) => {
+            const answerIndex = ANSWER_MAP[String(row.resposta_correta).trim().toUpperCase()] ?? 0;
+            return {
+              id: `${row.categoria}-${idx}`,
+              category: row.categoria || 'Geral',
+              question: row.pergunta,
+              options: [row.opcao_a, row.opcao_b, row.opcao_c, row.opcao_d].filter(Boolean),
+              answerIndex,
+              reference: row.referencia_biblica || ''
+            };
+          })
+          .filter((q) => q.question && q.options.length >= 2);
+        setQuestions(formatted);
+        setLoading(false);
+      },
+      error: (err) => {
+        setError(err.message);
+        setLoading(false);
+      }
+    });
+  }, []);
+
+  const categoryList = useMemo(() => {
+    const unique = Array.from(new Set(questions.map((q) => q.category)));
+    unique.sort();
+    return ['Todas', ...unique];
+  }, [questions]);
+
+  const filteredQuestions = useMemo(() => {
+    if (selectedCategory === 'Todas') return questions;
+    return questions.filter((q) => q.category === selectedCategory);
+  }, [questions, selectedCategory]);
+
+  useEffect(() => {
+    if (!filteredQuestions.length) {
+      setCurrentQuestion(null);
+      return;
+    }
+    const random = filteredQuestions[Math.floor(Math.random() * filteredQuestions.length)];
+    setCurrentQuestion(random);
+    setSelectedOption(null);
+    setIsSubmitted(false);
+  }, [filteredQuestions]);
 
   const handleSubmit = () => {
-    if (selectedOption === null) return;
+    if (selectedOption === null || !currentQuestion) return;
     setIsSubmitted(true);
+    setProgress((prev) => ({
+      correct: prev.correct + (selectedOption === currentQuestion.answerIndex ? 1 : 0),
+      total: prev.total + 1
+    }));
   };
 
   const handleNext = () => {
+    if (!filteredQuestions.length) return;
+    const random = filteredQuestions[Math.floor(Math.random() * filteredQuestions.length)];
+    setCurrentQuestion(random);
     setSelectedOption(null);
     setIsSubmitted(false);
-    setCurrentIndex((prev) => (prev + 1) % QUIZ_BANK.length);
   };
+
+  const accuracy =
+    progress.total === 0 ? 0 : Math.round((progress.correct / progress.total) * 100);
+
+  if (loading) {
+    return (
+      <section className="bg-card rounded-3xl shadow-card border border-slate-100 p-6 sm:p-10">
+        <p className="text-slate-500">Carregando perguntas...</p>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="bg-card rounded-3xl shadow-card border border-red-100 p-6 sm:p-10 text-red-600">
+        Falha ao carregar quiz: {error}
+      </section>
+    );
+  }
+
+  if (!currentQuestion) {
+    return (
+      <section className="bg-card rounded-3xl shadow-card border border-slate-100 p-6 sm:p-10 text-slate-500">
+        Nenhuma pergunta disponível para a categoria selecionada.
+      </section>
+    );
+  }
 
   return (
     <section className="bg-card rounded-3xl shadow-card border border-slate-100 p-6 sm:p-10 space-y-6">
-      <div>
-        <p className="text-sm uppercase tracking-[0.4em] text-brand-500">Quiz Bíblico</p>
-        <h2 className="text-3xl font-bold text-brand-900 mt-2">{currentQuiz.title}</h2>
-        <p className="text-slate-500">Responda e aprenda com curiosidades rápidas.</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm uppercase tracking-[0.4em] text-brand-500">Quiz Bíblico</p>
+          <h2 className="text-3xl font-bold text-brand-900 mt-2">{selectedCategory}</h2>
+          <p className="text-slate-500">Desafie-se com perguntas reais do arquivo “100_bible_trivia_rewritten”.</p>
+        </div>
+        <div className="bg-surface rounded-2xl border border-slate-100 p-4 text-center min-w-[180px]">
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Desempenho</p>
+          <p className="text-3xl font-extrabold text-brand-900">{accuracy}%</p>
+          <p className="text-xs text-slate-500">Acertos {progress.correct} / {progress.total}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-semibold text-slate-600">Filtrar por categoria</label>
+        <select
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+          className="rounded-2xl border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-surface"
+        >
+          {categoryList.map((cat) => (
+            <option key={cat} value={cat}>
+              {cat}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="space-y-4">
-        <p className="text-xl font-semibold text-slate-800">{currentQuiz.question}</p>
+        <div className="flex flex-col gap-1">
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{currentQuestion.category}</p>
+          <p className="text-xl font-semibold text-slate-800">{currentQuestion.question}</p>
+          {currentQuestion.reference && (
+            <p className="text-sm text-slate-400">Referência: {currentQuestion.reference}</p>
+          )}
+        </div>
         <div className="space-y-3">
-          {currentQuiz.options.map((option, index) => {
+          {currentQuestion.options.map((option, index) => {
             const isSelected = selectedOption === index;
-            const isCorrect = currentQuiz.answerIndex === index;
+            const isCorrect = currentQuestion.answerIndex === index;
             let stateClasses = 'border-slate-200';
             if (isSubmitted && isSelected) {
               stateClasses = isCorrect ? 'border-green-400 bg-green-50' : 'border-red-300 bg-red-50';
+            } else if (isSubmitted && isCorrect) {
+              stateClasses = 'border-green-400 bg-green-50';
             } else if (isSelected) {
               stateClasses = 'border-brand-400 bg-brand-50/60';
             }
 
             return (
               <button
-                key={option}
+                key={`${currentQuestion.id}-${option}`}
                 type="button"
                 onClick={() => !isSubmitted && setSelectedOption(index)}
                 className={`w-full text-left p-4 rounded-2xl border transition ${stateClasses}`}
@@ -97,7 +193,7 @@ function Quiz() {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-slate-500">
-          Pergunta {currentIndex + 1} de {QUIZ_BANK.length}
+          Perguntas respondidas: {progress.total}
         </div>
         {!isSubmitted ? (
           <button
@@ -110,22 +206,41 @@ function Quiz() {
             Conferir resposta
           </button>
         ) : (
-          <button
-            type="button"
-            onClick={handleNext}
-            className="px-6 py-3 rounded-full bg-surface text-brand-700 font-semibold border border-brand-100"
-          >
-            Próxima pergunta
-          </button>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={handleNext}
+              className="px-6 py-3 rounded-full bg-surface text-brand-700 font-semibold border border-brand-100"
+            >
+              Próxima pergunta
+            </button>
+            <button
+              type="button"
+              onClick={() => setProgress({ correct: 0, total: 0 })}
+              className="px-6 py-3 rounded-full bg-white text-slate-500 font-semibold border border-slate-200"
+            >
+              Resetar placar
+            </button>
+          </div>
         )}
       </div>
 
       {isSubmitted && (
-        <div className={`rounded-2xl border p-4 ${currentQuiz.answerIndex === selectedOption ? 'border-green-300 bg-green-50 text-green-700' : 'border-red-300 bg-red-50 text-red-700'}`}>
+        <div
+          className={`rounded-2xl border p-4 ${
+            currentQuestion.answerIndex === selectedOption
+              ? 'border-green-300 bg-green-50 text-green-700'
+              : 'border-red-300 bg-red-50 text-red-700'
+          }`}
+        >
           <p className="font-semibold">
-            {currentQuiz.answerIndex === selectedOption ? 'Resposta correta!' : 'Resposta incorreta'}
+            {currentQuestion.answerIndex === selectedOption ? 'Resposta correta!' : 'Resposta incorreta'}
           </p>
-          <p className="text-sm mt-1 text-slate-600">{currentQuiz.explanation}</p>
+          {currentQuestion.reference && (
+            <p className="text-sm mt-1 text-slate-600">
+              Consulte {currentQuestion.reference} para revisar o texto.
+            </p>
+          )}
         </div>
       )}
     </section>
