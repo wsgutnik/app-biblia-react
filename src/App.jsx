@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Papa from 'papaparse';
 import { VERSIONS, BOOKS } from './data';
 import Tabs from './components/Tabs';
@@ -9,6 +9,7 @@ import Commentary from './components/Commentary';
 import History from './components/History';
 import VerseOfTheDay from './components/VerseOfTheDay';
 import Streak from './components/Streak';
+import { loadStrongs } from './utils/loadStrongsdict';
 
 const loadScript = (src) => new Promise((resolve, reject) => {
     const script = document.createElement('script');
@@ -23,8 +24,7 @@ function App() {
   const [loadingMessage, setLoadingMessage] = useState('Carregando Bíblias...');
   const [error, setError] = useState(null);
   const [bibleData, setBibleData] = useState({});
-  const [greekDict, setGreekDict] = useState(null);
-  const [hebrewDict, setHebrewDict] = useState(null);
+  const [dicts, setDicts] = useState({ greek: null, hebrew: null });
   const [commentaryData, setCommentaryData] = useState([]);
   const [activeTab, setActiveTab] = useState('reader');
   const [initialChapter, setInitialChapter] = useState(null);
@@ -67,10 +67,8 @@ function App() {
         const bibleObject = allBibleData.reduce((acc, v) => { acc[v.id] = v.data; return acc; }, {});
         setBibleData(bibleObject);
         setLoadingMessage('Carregando Dicionários...');
-        await loadScript('/strongs-greek-dictionary.js');
-        await loadScript('/strongs-hebrew-dictionary.js');
-        if (window.strongsGreekDictionary) setGreekDict(window.strongsGreekDictionary);
-        if (window.strongsHebrewDictionary) setHebrewDict(window.strongsHebrewDictionary);
+        const d = await loadStrongs();
+        setDicts(d);
         const commentaries = await loadCommentaries();
         setCommentaryData(commentaries);
       } catch (err) {
@@ -134,7 +132,7 @@ function App() {
             <Search bibleData={bibleData} />
           </div>
           <div style={{ display: activeTab === 'dictionary' ? 'block' : 'none' }}>
-            <Dictionary greekDict={greekDict} hebrewDict={hebrewDict} bibleData={bibleData} />
+            <Dictionary greekDict={dicts.greek} hebrewDict={dicts.hebrew} bibleData={bibleData} />
           </div>
            <div style={{ display: activeTab === 'commentary' ? 'block' : 'none' }}>
             <Commentary commentaryData={commentaryData} bibleData={bibleData} />

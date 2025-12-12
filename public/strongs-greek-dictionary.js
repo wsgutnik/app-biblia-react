@@ -1,3 +1,7 @@
+// Add these lines at the very top of the file:
+(function (global) {
+  var module = module || { exports: {} };
+  var exports = module.exports;
 /**
  *                      Dictionary of Greek Words
  *                              taken from
@@ -27,6 +31,15 @@
  * 
  * Ulrik Petersen
  */
+
+// Add these lines at the very end of the file:
+  // expose safely to browser global
+  try {
+    global.STRONGS_GREEK = module.exports && (module.exports.default || module.exports);
+  } catch (e) {
+    /* ignore */
+  }
+})(typeof window !== 'undefined' ? window : this);
 
 var strongsGreekDictionary = {"G1615":{"strongs_def":" to complete fully","derivation":"from G1537 (ἐκ) and G5055 (τελέω);","translit":"ekteléō","lemma":"ἐκτελέω","kjv_def":"finish"},
 "G2274":{"strongs_def":" to make worse, i.e. vanquish (literally or figuratively); by implication, to rate lower","derivation":"from the same as G2276 (ἥττον);","translit":"hēttáō","lemma":"ἡττάω","kjv_def":"be inferior, overcome"},

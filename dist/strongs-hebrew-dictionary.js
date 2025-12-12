@@ -1,3 +1,8 @@
+// Add these lines at the very top of the file:
+(function (global) {
+  var module = module || { exports: {} };
+  var exports = module.exports;
+
 /**
  * A Concise Dictionary of the Words in the Hebrew Bible
  *    with their Renderings in the King James Version
@@ -22,6 +27,14 @@
  * Comments or corrections:
  * open-scriptures@googlegroups.com
  */
+// Add these lines at the very end of the file:
+  // expose safely to browser global
+  try {
+    global.STRONGS_HEBREW = module.exports && (module.exports.default || module.exports);
+  } catch (e) {
+    /* ignore */
+  }
+})(typeof window !== 'undefined' ? window : this);
 
 var strongsHebrewDictionary = {"H1":{"lemma":"אָב","xlit":"ʼâb","pron":"awb","derivation":"a primitive word;","strongs_def":"father, in a literal and immediate, or figurative and remote application","kjv_def":"chief, (fore-) father(-less), [idiom] patrimony, principal. Compare names in 'Abi-'."},
 "H2":{"lemma":"אַב","xlit":"ʼab","pron":"ab","derivation":"(Aramaic) corresponding to H1 (אָב)","strongs_def":"{father}","kjv_def":"father."},

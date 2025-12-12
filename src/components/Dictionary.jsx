@@ -1,84 +1,96 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { BOOKS } from '../data';
+import React, { useMemo, useState, useEffect } from 'react';
+
+const TRANSLATION_SERVICES = [
+  'https://libretranslate.de/translate',
+  'https://translate.astian.org/translate',
+  'https://translate.mentality.rip/translate',
+  'https://libretranslate.com/translate'
+];
 
 // --- Sub-componente para a nova página de detalhes da palavra ---
 const EntryDetailView = ({ entry, bibleData, onBack }) => {
   const [translation, setTranslation] = useState('Traduzindo...');
 
+  // guard against missing entry (prevents render crashes)
+  if (!entry) return null;
+
   // Efeito para traduzir a definição quando a palavra muda
   useEffect(() => {
+    let isMounted = true;
     const translateDefinition = async () => {
       if (!entry.strongs_def) {
         setTranslation('Definição não disponível.');
         return;
       }
-      try {
-        const response = await fetch("https://libretranslate.de/translate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+      for (const endpoint of TRANSLATION_SERVICES) {
+        try {
+          const payload = new URLSearchParams({
             q: entry.strongs_def,
-            source: "en",
-            target: "pt",
-            format: "text"
-          })
-        });
+            source: 'en',
+            target: 'pt',
+            format: 'text'
+          });
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+            body: payload
+          });
 
-        if (!response.ok) {
-          throw new Error(`Erro na API: ${response.statusText}`);
+          if (!response.ok) {
+            throw new Error(`Erro na API: ${response.status} ${response.statusText}`);
+          }
+
+          const result = await response.json();
+
+          if (result && result.translatedText) {
+            if (isMounted) setTranslation(result.translatedText);
+            return;
+          }
+        } catch (error) {
+          console.warn(`Falha ao traduzir usando ${endpoint}:`, error);
         }
-
-        const result = await response.json();
-
-        if (result && result.translatedText) {
-          setTranslation(result.translatedText);
-        } else {
-          throw new Error("Resposta da API inválida.");
-        }
-      } catch (error) {
-        console.error("Erro de tradução:", error);
-        setTranslation("Não foi possível traduzir a definição.");
       }
+      if (isMounted) setTranslation("Não foi possível traduzir a definição.");
     };
 
     translateDefinition();
+    return () => { isMounted = false; };
   }, [entry.strongs_def]);
 
   // Procura por todas as referências da palavra na Bíblia
   const references = useMemo(() => {
     const found = [];
-    const strongId = entry.strong_number;
-    const kjvStrongs = bibleData['kjv_strongs'];
-    const almeidaRC = bibleData['almeida_rc'];
+    const strongId = entry?.strong_number;
+    const kjvStrongs = bibleData?.kjv_strongs;
+    const almeidaRC = bibleData?.almeida_rc;
 
-    if (!strongId || !kjvStrongs || !almeidaRC) return [];
+    if (!strongId || !Array.isArray(kjvStrongs) || !Array.isArray(almeidaRC)) return found;
+
+    const strongRegex = new RegExp(`[<{]${strongId}[>}]`);
 
     for (const verse of kjvStrongs) {
-      const strongRegex = new RegExp(`[<{]${strongId}[>}]`);
-      if (verse.text && verse.text.match(strongRegex)) {
-        const bookInfo = BOOKS.find(b => b.abbrev === verse.book_abbrev);
-        
-        // Agora, encontra o mesmo versículo na Almeida RC
-        const almeidaVerse = almeidaRC.find(v => 
-            v.book_abbrev === verse.book_abbrev && 
-            v.chapter === verse.chapter && 
-            v.verse === verse.verse
-        );
+      if (!verse?.text) continue;
+      if (!strongRegex.test(verse.text)) continue;
 
-        if (bookInfo && almeidaVerse) {
-          found.push({
-            ref: `${bookInfo.name} ${verse.chapter}:${verse.verse}`,
-            text_kjv: verse.text.replace(/<[^>]*>/g, ''), // Limpa tags da KJV
-            text_arc: almeidaVerse.text
-          });
-        }
-      }
+      // find corresponding verse in Almeida (by book abbrev, chapter and verse)
+      const almeidaVerse = almeidaRC.find(v =>
+        v.book_abbrev === verse.book_abbrev &&
+        Number(v.chapter) === Number(verse.chapter) &&
+        Number(v.verse) === Number(verse.verse)
+      );
+
+      found.push({
+        ref: `${verse.book_abbrev} ${verse.chapter}:${verse.verse}`,
+        text_kjv: verse.text || '',
+        text_arc: almeidaVerse?.text || ''
+      });
     }
+
     return found;
-  }, [entry.strong_number, bibleData]);
+  }, [entry?.strong_number, bibleData]);
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow-md animate-fade-in">
+    <div className="p-4 bg-white rounded-lg shadow-md">
       <button onClick={onBack} className="mb-4 text-blue-600 hover:underline">← Voltar</button>
       
       <div className="mb-6">
@@ -116,6 +128,20 @@ const EntryDetailView = ({ entry, bibleData, onBack }) => {
 
 // --- Componente Principal do Dicionário (com paginação e busca inteligente) ---
 function Dictionary({ greekDict, hebrewDict, bibleData }) {
+  // debug log incoming props
+  useEffect(() => {
+    console.log('DEBUG Dictionary props:', { greekDict, hebrewDict, bibleData });
+    // expose a quick helper to inspect sample entries
+    window.__DICT_SAMPLE = {
+      greekSample: greekDict ? Object.keys(greekDict).slice(0,10) : null,
+      hebrewSample: hebrewDict ? Object.keys(hebrewDict).slice(0,10) : null
+    };
+  }, [greekDict, hebrewDict, bibleData]);
+
+  if (!greekDict && !hebrewDict) {
+    return <div style={{padding:20}}>Dicionários ausentes no componente Dictionary. Ver Console.</div>;
+  }
+
   const [term, setTerm] = useState('');
   const [searchIn, setSearchIn] = useState('greek');
   const [results, setResults] = useState([]);
@@ -156,8 +182,164 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
 
   const paginatedResults = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return results.slice(startIndex, startIndex, startIndex + ITEMS_PER_PAGE);
+    return results.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [currentPage, results]);
 
-  // ... (O resto do componente Dictionary que não foi fornecido)
+  const totalPages = Math.max(1, Math.ceil(results.length / ITEMS_PER_PAGE));
+  const dictionaryLabel = searchIn === 'greek' ? 'grego' : 'hebraico';
+
+  const switchDictionary = (type) => {
+    if (searchIn === type) return;
+    setSearchIn(type);
+    setSelectedEntry(null);
+    setTerm('');
+  };
+
+  const handleClear = () => {
+    setTerm('');
+    updateResults('');
+  };
+
+  const handlePageChange = (direction) => {
+    setCurrentPage((prev) => {
+      if (direction === 'prev') return Math.max(1, prev - 1);
+      if (direction === 'next') return Math.min(totalPages, prev + 1);
+      return prev;
+    });
+  };
+
+  return (
+    <section className="bg-white rounded-2xl shadow-md p-6 min-h-[70vh] flex flex-col gap-6">
+      {selectedEntry ? (
+        <EntryDetailView
+          entry={selectedEntry}
+          bibleData={bibleData}
+          onBack={() => setSelectedEntry(null)}
+        />
+      ) : (
+        <>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => switchDictionary('greek')}
+                className={`px-4 py-2 rounded-lg border transition ${
+                  searchIn === 'greek'
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'border-slate-200 text-slate-600 hover:border-slate-400'
+                }`}
+              >
+                Grego
+              </button>
+              <button
+                type="button"
+                onClick={() => switchDictionary('hebrew')}
+                className={`px-4 py-2 rounded-lg border transition ${
+                  searchIn === 'hebrew'
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'border-slate-200 text-slate-600 hover:border-slate-400'
+                }`}
+              >
+                Hebraico
+              </button>
+            </div>
+
+            <form onSubmit={handleSearch} className="flex flex-1 gap-2">
+              <input
+                type="text"
+                value={term}
+                onChange={(e) => setTerm(e.target.value)}
+                placeholder="Procure por número Strong, lema ou definição"
+                className="flex-1 rounded-lg border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-400"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
+              >
+                Buscar
+              </button>
+              {term && (
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:border-slate-400"
+                >
+                  Limpar
+                </button>
+              )}
+            </form>
+          </div>
+
+          <div className="text-sm text-slate-500">
+            {results.length
+              ? `Encontradas ${results.length.toLocaleString()} palavras no dicionário ${dictionaryLabel}.`
+              : `Nenhuma palavra encontrada no dicionário ${dictionaryLabel}.`}
+          </div>
+
+          <div className="flex-1 overflow-hidden rounded-xl border border-slate-100">
+            <div className="max-h-[50vh] overflow-y-auto divide-y divide-slate-100">
+              {paginatedResults.length === 0 ? (
+                <div className="p-6 text-center text-slate-500">
+                  Digite um termo para começar a pesquisar ou tente outro filtro.
+                </div>
+              ) : (
+                paginatedResults.map((entry) => (
+                  <button
+                    key={entry.strong_number}
+                    type="button"
+                    onClick={() => setSelectedEntry(entry)}
+                    className="w-full text-left p-4 hover:bg-slate-50 transition flex flex-col gap-1"
+                  >
+                    <div className="flex items-center justify-between text-sm text-slate-500">
+                      <span className="font-semibold uppercase tracking-wide text-slate-600">
+                        {entry.lemma || '—'}
+                      </span>
+                      <span className="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-1 rounded-md">
+                        {entry.strong_number}
+                      </span>
+                    </div>
+                    {entry.translit && (
+                      <p className="text-xs text-slate-400">{entry.translit}</p>
+                    )}
+                    {entry.strongs_def && (
+                      <p className="text-sm text-slate-600">
+                        {entry.strongs_def}
+                      </p>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+
+          {results.length > ITEMS_PER_PAGE && (
+            <div className="flex items-center justify-between text-sm text-slate-500">
+              <button
+                type="button"
+                onClick={() => handlePageChange('prev')}
+                disabled={currentPage === 1}
+                className="px-4 py-2 rounded-lg border border-slate-200 disabled:opacity-40"
+              >
+                Anterior
+              </button>
+              <span>
+                Página {currentPage} de {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => handlePageChange('next')}
+                disabled={currentPage >= totalPages}
+                className="px-4 py-2 rounded-lg border border-slate-200 disabled:opacity-40"
+              >
+                Próxima
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
 }
+
+// Ensure the main component is exported as default
+export default Dictionary;
