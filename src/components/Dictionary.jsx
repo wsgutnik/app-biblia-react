@@ -1,11 +1,27 @@
 import React, { useMemo, useState, useEffect } from 'react';
 
-const TRANSLATION_SERVICES = [
-  'https://libretranslate.de/translate',
-  'https://translate.astian.org/translate',
-  'https://translate.mentality.rip/translate',
-  'https://libretranslate.com/translate'
-];
+// cache translated definitions to avoid repeated network calls
+const translationCache = new Map();
+
+const translateWithGoogle = async (text) => {
+  const params = new URLSearchParams({
+    client: 'gtx',
+    sl: 'en',
+    tl: 'pt',
+    dt: 't',
+    q: text
+  });
+  const response = await fetch(`https://translate.googleapis.com/translate_a/single?${params.toString()}`);
+  if (!response.ok) {
+    throw new Error(`Erro Google Translate: ${response.status}`);
+  }
+  const data = await response.json();
+  const translatedSegments = data?.[0]?.map((segment) => segment?.[0]).filter(Boolean);
+  if (!translatedSegments || translatedSegments.length === 0) {
+    throw new Error('Resposta sem texto traduzido.');
+  }
+  return translatedSegments.join(' ');
+};
 
 // --- Sub-componente para a nova página de detalhes da palavra ---
 const EntryDetailView = ({ entry, bibleData, onBack }) => {
@@ -22,35 +38,19 @@ const EntryDetailView = ({ entry, bibleData, onBack }) => {
         setTranslation('Definição não disponível.');
         return;
       }
-      for (const endpoint of TRANSLATION_SERVICES) {
-        try {
-          const payload = new URLSearchParams({
-            q: entry.strongs_def,
-            source: 'en',
-            target: 'pt',
-            format: 'text'
-          });
-          const response = await fetch(endpoint, {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
-            body: payload
-          });
-
-          if (!response.ok) {
-            throw new Error(`Erro na API: ${response.status} ${response.statusText}`);
-          }
-
-          const result = await response.json();
-
-          if (result && result.translatedText) {
-            if (isMounted) setTranslation(result.translatedText);
-            return;
-          }
-        } catch (error) {
-          console.warn(`Falha ao traduzir usando ${endpoint}:`, error);
-        }
+      const definition = entry.strongs_def.trim();
+      if (translationCache.has(definition)) {
+        setTranslation(translationCache.get(definition));
+        return;
       }
-      if (isMounted) setTranslation("Não foi possível traduzir a definição.");
+      try {
+        const translatedText = await translateWithGoogle(definition);
+        translationCache.set(definition, translatedText);
+        if (isMounted) setTranslation(translatedText);
+      } catch (error) {
+        console.warn('Falha ao traduzir com Google Translate:', error);
+        if (isMounted) setTranslation("Não foi possível traduzir a definição automaticamente.");
+      }
     };
 
     translateDefinition();
@@ -90,23 +90,26 @@ const EntryDetailView = ({ entry, bibleData, onBack }) => {
   }, [entry?.strong_number, bibleData]);
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow-md">
-      <button onClick={onBack} className="mb-4 text-blue-600 hover:underline">← Voltar</button>
+    <div className="p-6 bg-card rounded-3xl shadow-card border border-slate-100">
+      <button onClick={onBack} className="mb-6 inline-flex items-center gap-2 text-brand-600 hover:text-brand-800 font-semibold">
+        <span>←</span>
+        Voltar
+      </button>
       
       <div className="mb-6">
-        <h2 className="text-3xl font-bold text-slate-800">{entry.lemma}</h2>
+        <h2 className="text-3xl font-bold text-brand-900">{entry.lemma}</h2>
         <p className="text-lg text-slate-500">{entry.translit}</p>
         <p className="text-sm text-slate-400">Strongs: {entry.strong_number}</p>
       </div>
 
       <div className="space-y-4">
         <div>
-          <h3 className="font-bold text-lg text-slate-700">Definição (Strongs):</h3>
-          <p className="text-slate-600 italic pl-4 border-l-2 border-slate-200">{entry.strongs_def}</p>
+          <h3 className="font-bold text-lg text-brand-800">Definição (Strongs):</h3>
+          <p className="text-slate-600 italic pl-4 border-l-2 border-brand-100">{entry.strongs_def}</p>
         </div>
         <div>
-          <h3 className="font-bold text-lg text-blue-700">Tradução (IA):</h3>
-          <p className="text-blue-600 pl-4 border-l-2 border-blue-200">{translation}</p>
+          <h3 className="font-bold text-lg text-brand-700">Tradução (IA):</h3>
+          <p className="text-brand-700 pl-4 border-l-2 border-brand-100">{translation}</p>
         </div>
       </div>
       
@@ -209,7 +212,7 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
   };
 
   return (
-    <section className="bg-white rounded-2xl shadow-md p-6 min-h-[70vh] flex flex-col gap-6">
+    <section className="bg-card rounded-3xl shadow-card border border-slate-100 p-6 sm:p-8 min-h-[70vh] flex flex-col gap-8">
       {selectedEntry ? (
         <EntryDetailView
           entry={selectedEntry}
@@ -223,22 +226,32 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
               <button
                 type="button"
                 onClick={() => switchDictionary('greek')}
-                className={`px-4 py-2 rounded-lg border transition ${
+                className={`px-4 py-2 rounded-full border transition font-semibold ${
                   searchIn === 'greek'
-                    ? 'bg-slate-900 text-white border-slate-900'
-                    : 'border-slate-200 text-slate-600 hover:border-slate-400'
+                    ? 'text-white border-transparent shadow-lg'
+                    : 'border-slate-200 text-brand-700 hover:border-brand-300 bg-white'
                 }`}
+                style={
+                  searchIn === 'greek'
+                    ? { backgroundColor: 'var(--color-brand, #1d4ed8)' }
+                    : undefined
+                }
               >
                 Grego
               </button>
               <button
                 type="button"
                 onClick={() => switchDictionary('hebrew')}
-                className={`px-4 py-2 rounded-lg border transition ${
+                className={`px-4 py-2 rounded-full border transition font-semibold ${
                   searchIn === 'hebrew'
-                    ? 'bg-slate-900 text-white border-slate-900'
-                    : 'border-slate-200 text-slate-600 hover:border-slate-400'
+                    ? 'text-white border-transparent shadow-lg'
+                    : 'border-slate-200 text-brand-700 hover:border-brand-300 bg-white'
                 }`}
+                style={
+                  searchIn === 'hebrew'
+                    ? { backgroundColor: 'var(--color-brand, #1d4ed8)' }
+                    : undefined
+                }
               >
                 Hebraico
               </button>
@@ -250,11 +263,11 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
                 value={term}
                 onChange={(e) => setTerm(e.target.value)}
                 placeholder="Procure por número Strong, lema ou definição"
-                className="flex-1 rounded-lg border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                className="flex-1 rounded-2xl border border-slate-200 px-4 py-3 bg-surface focus:outline-none focus:ring-2 focus:ring-brand-400"
               />
               <button
                 type="submit"
-                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
+                className="px-5 py-3 rounded-2xl bg-brand-600 text-white font-semibold hover:bg-brand-700 transition"
               >
                 Buscar
               </button>
@@ -262,7 +275,7 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
                 <button
                   type="button"
                   onClick={handleClear}
-                  className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:border-slate-400"
+                  className="px-5 py-3 rounded-2xl border border-slate-200 text-slate-600 hover:border-slate-400"
                 >
                   Limpar
                 </button>
@@ -276,7 +289,7 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
               : `Nenhuma palavra encontrada no dicionário ${dictionaryLabel}.`}
           </div>
 
-          <div className="flex-1 overflow-hidden rounded-xl border border-slate-100">
+          <div className="flex-1 overflow-hidden rounded-2xl border border-slate-100 bg-surface">
             <div className="max-h-[50vh] overflow-y-auto divide-y divide-slate-100">
               {paginatedResults.length === 0 ? (
                 <div className="p-6 text-center text-slate-500">
@@ -288,13 +301,13 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
                     key={entry.strong_number}
                     type="button"
                     onClick={() => setSelectedEntry(entry)}
-                    className="w-full text-left p-4 hover:bg-slate-50 transition flex flex-col gap-1"
+                    className="w-full text-left p-4 hover:bg-brand-50/80 transition flex flex-col gap-1"
                   >
                     <div className="flex items-center justify-between text-sm text-slate-500">
-                      <span className="font-semibold uppercase tracking-wide text-slate-600">
+                      <span className="font-semibold uppercase tracking-wide text-brand-800">
                         {entry.lemma || '—'}
                       </span>
-                      <span className="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-1 rounded-md">
+                      <span className="text-xs font-mono bg-white text-brand-700 px-2 py-1 rounded-md border border-brand-100">
                         {entry.strong_number}
                       </span>
                     </div>

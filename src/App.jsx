@@ -1,15 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense, lazy } from 'react';
 import Papa from 'papaparse';
 import { VERSIONS, BOOKS } from './data';
 import Tabs from './components/Tabs';
-import Reader from './components/Reader';
-import Search from './components/Search';
-import Dictionary from './components/Dictionary';
-import Commentary from './components/Commentary';
-import History from './components/History';
 import VerseOfTheDay from './components/VerseOfTheDay';
 import Streak from './components/Streak';
+import AuthActions from './components/AuthActions';
 import { loadStrongs } from './utils/loadStrongsdict';
+import { isAuth0Configured } from './config/auth0.js';
+
+const Reader = lazy(() => import('./components/Reader'));
+const Search = lazy(() => import('./components/Search'));
+const Dictionary = lazy(() => import('./components/Dictionary'));
+const Commentary = lazy(() => import('./components/Commentary'));
+const History = lazy(() => import('./components/History'));
+const Profile = lazy(() => import('./components/Profile'));
 
 const loadScript = (src) => new Promise((resolve, reject) => {
     const script = document.createElement('script');
@@ -88,9 +92,9 @@ function App() {
 
   if (isLoading) {
     return (
-        <div className="flex items-center justify-center h-screen bg-slate-50">
+        <div className="flex items-center justify-center h-screen bg-surface">
             <div className="text-center">
-                <h1 className="text-2xl font-bold text-slate-800">{loadingMessage}</h1>
+                <h1 className="text-2xl font-bold text-brand-800">{loadingMessage}</h1>
                 <p className="text-slate-600 mt-2">Isso pode levar alguns segundos...</p>
             </div>
         </div>
@@ -99,23 +103,30 @@ function App() {
 
   if (error) {
      return (
-        <div className="flex items-center justify-center h-screen bg-slate-50">
-            <div className="text-center p-4 max-w-lg">
+        <div className="flex items-center justify-center h-screen bg-surface px-4">
+            <div className="text-center p-6 max-w-lg rounded-2xl bg-white shadow-card border border-red-100">
                 <h1 className="text-xl font-bold text-red-600">Erro Crítico ao Carregar Dados</h1>
-                <p className="font-mono bg-red-100 text-red-800 p-2 rounded mt-2 break-all">{error}</p>
+                <p className="font-mono bg-red-50 text-red-800 p-3 rounded mt-3 break-all">{error}</p>
             </div>
         </div>
      );
   }
   
   return (
-    <div className="bg-slate-50 min-h-screen">
-      <div className="max-w-5xl mx-auto p-4 sm:p-8">
-        <header className="mb-10 text-center relative">
-          <h1 className="text-4xl font-bold text-slate-900">Bíblia Sagrada</h1>
-          <p className="text-lg text-slate-600 mt-2">Sua ferramenta de estudo das Escrituras.</p>
-          <div className="absolute top-0 right-0">
-            <Streak />
+    <div className="bg-surface min-h-screen">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <header className="relative mb-10 overflow-hidden rounded-3xl bg-card px-6 py-8 shadow-card border border-slate-100">
+          <div className="absolute inset-0 bg-gradient-to-r from-brand-50/80 via-transparent to-transparent pointer-events-none" aria-hidden="true" />
+          <div className="relative z-10 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-center sm:text-left">
+              <p className="text-xs uppercase tracking-[0.35em] text-brand-500">ADBelem</p>
+              <h1 className="text-4xl font-extrabold text-brand-900 mt-2">Bíblia Sagrada</h1>
+              <p className="text-base text-slate-600 mt-2">Uma experiência moderna de leitura, estudo e pesquisa bíblica.</p>
+            </div>
+            <div className="self-center sm:self-auto flex flex-col items-center sm:items-end gap-4">
+              {isAuth0Configured && <AuthActions />}
+              <Streak />
+            </div>
           </div>
         </header>
         
@@ -125,21 +136,32 @@ function App() {
         <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
         
         <main className="mt-8">
-          <div style={{ display: activeTab === 'reader' ? 'block' : 'none' }}>
-            <Reader bibleData={bibleData} initialChapter={initialChapter} setInitialChapter={setInitialChapter} />
-          </div>
-          <div style={{ display: activeTab === 'search' ? 'block' : 'none' }}>
-            <Search bibleData={bibleData} />
-          </div>
-          <div style={{ display: activeTab === 'dictionary' ? 'block' : 'none' }}>
-            <Dictionary greekDict={dicts.greek} hebrewDict={dicts.hebrew} bibleData={bibleData} />
-          </div>
-           <div style={{ display: activeTab === 'commentary' ? 'block' : 'none' }}>
-            <Commentary commentaryData={commentaryData} bibleData={bibleData} />
-          </div>
-          <div style={{ display: activeTab === 'history' ? 'block' : 'none' }}>
-            <History onNavigate={handleNavigateFromHistory} />
-          </div>
+          <Suspense fallback={<div className="rounded-3xl bg-card border border-slate-100 shadow-card p-8 text-center text-slate-500">Carregando conteúdo...</div>}>
+            {(() => {
+              switch (activeTab) {
+                case 'reader':
+                  return (
+                    <Reader
+                      bibleData={bibleData}
+                      initialChapter={initialChapter}
+                      setInitialChapter={setInitialChapter}
+                    />
+                  );
+                case 'search':
+                  return <Search bibleData={bibleData} />;
+                case 'dictionary':
+                  return <Dictionary greekDict={dicts.greek} hebrewDict={dicts.hebrew} bibleData={bibleData} />;
+                case 'commentary':
+                  return <Commentary commentaryData={commentaryData} bibleData={bibleData} />;
+                case 'history':
+                  return <History onNavigate={handleNavigateFromHistory} />;
+                case 'profile':
+                  return <Profile />;
+                default:
+                  return null;
+              }
+            })()}
+          </Suspense>
         </main>
       </div>
     </div>

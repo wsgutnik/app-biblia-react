@@ -97,36 +97,36 @@ function VerseOfTheDay({ bibleData }) {
 
     return (
         <div className="mb-12">
-            <div className="bg-white rounded-xl shadow-lg border border-slate-200">
+            <div className="bg-card rounded-2xl shadow-card border border-slate-100 overflow-hidden">
                 {/* NOVO: Cabeçalho clicável com o botão de minimizar */}
                 <div 
-                    className="flex justify-between items-center p-4 cursor-pointer" 
+                    className="flex justify-between items-center px-6 py-4 cursor-pointer bg-brand-50/60"
                     onClick={() => setIsMinimized(!isMinimized)}
                 >
-                    <h2 className="text-sm font-bold uppercase text-blue-600 tracking-widest">Verso do Dia</h2>
-                    <button className="text-slate-400 hover:text-blue-600">
+                    <h2 className="text-sm font-bold uppercase text-brand-700 tracking-[0.4em]">Verso do Dia</h2>
+                    <button className="text-brand-500 hover:text-brand-700">
                        <MinimizeIcon isMinimized={isMinimized} />
                     </button>
                 </div>
                 
                 {/* NOVO: O conteúdo do cartão só é mostrado se não estiver minimizado */}
                 {!isMinimized && (
-                    <div className="p-8 pt-4 text-center animate-fade-in">
+                    <div className="p-8 pt-6 text-center animate-fade-in">
                         {verseData ? (
                             <>
-                                <p className="text-2xl md:text-3xl text-slate-700 leading-relaxed">
+                                <p className="text-2xl md:text-3xl text-brand-900 leading-relaxed">
                                     "{verseData.text}"
                                 </p>
-                                <p className="font-bold text-slate-500 mt-6 text-xl">— {verseData.reference}</p>
+                                <p className="font-semibold text-slate-500 mt-6 text-lg">— {verseData.reference}</p>
                                 
                                 <div className="flex items-center justify-center gap-4 mt-8 pt-6 border-t border-slate-200">
-                                    <select value={version} onChange={e => setVersion(e.target.value)} onClick={e => e.stopPropagation()} className="w-full max-w-xs p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500">
+                                    <select value={version} onChange={e => setVersion(e.target.value)} onClick={e => e.stopPropagation()} className="w-full max-w-xs p-2 border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-brand-500">
                                         {VERSIONS.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
                                     </select>
                                     <button onClick={handleLoveClick} className="p-2 rounded-full hover:bg-red-100 transition-colors" title="Amar">
                                         <HeartIcon filled={isLoved} />
                                     </button>
-                                    <button onClick={handleShareClick} className="p-2 rounded-full text-slate-400 hover:bg-blue-100 hover:text-blue-600 transition-colors" title="Compartilhar">
+                                    <button onClick={handleShareClick} className="p-2 rounded-full text-brand-500 hover:bg-brand-50 hover:text-brand-700 transition-colors" title="Compartilhar">
                                         <ShareIcon />
                                     </button>
                                 </div>

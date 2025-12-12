@@ -1,12 +1,33 @@
-# Biblia Sagrada - ADBelem
+# Bíblia Sagrada - ADBelem
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicação React + Vite para leitura, buscas e estudos bíblicos com visual moderno, dicionários Strongs, comentários e suporte opcional a login via Auth0.
 
-Currently, two official plugins are available:
+## Requisitos
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Node 18+
+- npm 10+
 
-## Expanding the ESLint configuration
+## Configuração do Auth0
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1. No painel da Auth0 crie uma aplicação **Single Page Application** e copie o `Domain` e `Client ID`.
+2. Duplique o arquivo `.env.example` para `.env.local` e preencha **com o Client ID da aplicação SPA** (é uma string parecida com `a0BcD123XYZ...`, não o ID da conexão que começa com `con_`):
+
+   ```bash
+   VITE_AUTH0_DOMAIN=dev-xxxxx.us.auth0.com
+   VITE_AUTH0_CLIENT_ID=SEU_CLIENT_ID
+   ```
+
+3. Em **Application URIs** cadastre (tanto em *Allowed Callback* quanto em *Allowed Logout*):
+   - `http://localhost:5173`
+   - a URL pública de produção quando publicar.
+
+Sem essas variáveis o app continua funcionando normalmente, apenas sem os botões de autenticação.
+
+## Scripts
+
+```bash
+npm install      # instala dependências
+npm run dev      # ambiente de desenvolvimento com HMR
+npm run build    # gera a pasta dist/
+npm run preview  # serve o build localmente
+```
