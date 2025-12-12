@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Papa from 'papaparse';
+import { translateText } from '../utils/translate';
 
 const CSV_PATH = '/100_bible_trivia_rewritten.csv';
 const STORAGE_KEY = 'quiz_progress_v1';
@@ -14,6 +15,9 @@ function Quiz() {
   const [selectedOption, setSelectedOption] = useState(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [progress, setProgress] = useState({ correct: 0, total: 0 });
+  const [questionTranslation, setQuestionTranslation] = useState('');
+  const [optionTranslations, setOptionTranslations] = useState([]);
+  const [translationError, setTranslationError] = useState('');
 
   useEffect(() => {
     try {
@@ -74,13 +78,46 @@ function Quiz() {
   useEffect(() => {
     if (!filteredQuestions.length) {
       setCurrentQuestion(null);
+      setQuestionTranslation('');
+      setOptionTranslations([]);
       return;
     }
     const random = filteredQuestions[Math.floor(Math.random() * filteredQuestions.length)];
     setCurrentQuestion(random);
     setSelectedOption(null);
     setIsSubmitted(false);
+    setTranslationError('');
   }, [filteredQuestions]);
+
+  useEffect(() => {
+    if (!currentQuestion) return;
+    let isMounted = true;
+    setQuestionTranslation('');
+    setOptionTranslations([]);
+    setTranslationError('');
+    const runTranslation = async () => {
+      try {
+        const qTranslation = await translateText(currentQuestion.question);
+        const optionPromises = currentQuestion.options.map((opt) => translateText(opt));
+        const translatedOpts = await Promise.all(optionPromises);
+        if (isMounted) {
+          setQuestionTranslation(qTranslation);
+          setOptionTranslations(translatedOpts);
+        }
+      } catch (err) {
+        console.warn('Falha ao traduzir pergunta do quiz:', err);
+        if (isMounted) {
+          setQuestionTranslation('');
+          setOptionTranslations([]);
+          setTranslationError('Não foi possível traduzir automaticamente.');
+        }
+      }
+    };
+    runTranslation();
+    return () => {
+      isMounted = false;
+    };
+  }, [currentQuestion]);
 
   const handleSubmit = () => {
     if (selectedOption === null || !currentQuestion) return;
@@ -159,7 +196,15 @@ function Quiz() {
       <div className="space-y-4">
         <div className="flex flex-col gap-1">
           <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{currentQuestion.category}</p>
-          <p className="text-xl font-semibold text-slate-800">{currentQuestion.question}</p>
+          <p className="text-xl font-semibold text-slate-800">
+            {questionTranslation || currentQuestion.question}
+          </p>
+          {questionTranslation && (
+            <p className="text-sm text-slate-400">Original: {currentQuestion.question}</p>
+          )}
+          {translationError && (
+            <p className="text-xs text-red-500">{translationError}</p>
+          )}
           {currentQuestion.reference && (
             <p className="text-sm text-slate-400">Referência: {currentQuestion.reference}</p>
           )}
@@ -184,7 +229,14 @@ function Quiz() {
                 onClick={() => !isSubmitted && setSelectedOption(index)}
                 className={`w-full text-left p-4 rounded-2xl border transition ${stateClasses}`}
               >
-                <span className="font-medium text-slate-800">{option}</span>
+                <span className="font-medium text-slate-800">
+                  {optionTranslations[index] || option}
+                </span>
+                {optionTranslations[index] && (
+                  <span className="block text-xs text-slate-400 mt-1">
+                    Original: {option}
+                  </span>
+                )}
               </button>
             );
           })}
