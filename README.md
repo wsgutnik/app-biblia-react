@@ -50,3 +50,18 @@ Rotas disponíveis:
 - `GET /entries/:number` – obtém um verbete completo (ex.: `/entries/G25`)
 
 No front defina `VITE_API_URL` (vide `.env.example`) para apontar para a URL base do backend. Depois disso, os fetches podem usar `fetch(\`\${import.meta.env.VITE_API_URL}/entries/G25\`)`.
+
+### Deploy gratuito (Render)
+
+O projeto já inclui um `render.yaml` para publicar o backend no plano gratuito do [Render](https://render.com/). O fluxo completo:
+
+1. Crie uma conta (ou faça login) no Render e autorize o acesso ao seu repositório do GitHub.
+2. Clique em **New > Blueprint** e selecione este repositório. O Render detectará o `render.yaml`.
+3. Dê um nome para o serviço (por exemplo `strongs-api`) e confirme. O build executará `cd server && npm install` e o start `cd server && npm start`.
+4. Após o deploy, copie a URL pública (ex.: `https://strongs-api.onrender.com`) e atualize o front-end (`.env.local`) com `VITE_API_URL` apontando para esse endereço.
+
+Observações:
+
+- O SQLite é reconstruído a cada deploy usando os arquivos JSON dos dicionários, então não há dependência de um banco externo.
+- Caso precise definir outra localização do banco, use a variável `DATABASE_PATH` (Render → serviço → Environment → Add Env Var).
+- O plano gratuito hiberna após alguns minutos sem uso; a primeira requisição pode levar alguns segundos enquanto o container desperta.
