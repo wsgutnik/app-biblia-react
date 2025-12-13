@@ -29,7 +29,7 @@ const MinimizeIcon = ({ isMinimized }) => (
 );
 
 
-function VerseOfTheDay({ bibleData }) {
+function VerseOfTheDay({ bibleData, className = '' }) {
     const [verseData, setVerseData] = useState(null);
     const [version, setVersion] = useState('almeida_rc');
     const [isLoved, setIsLoved] = useState(false);
@@ -95,8 +95,10 @@ function VerseOfTheDay({ bibleData }) {
         }
     };
 
+    const wrapperClasses = className || 'mb-12 lg:mb-0';
+
     return (
-        <div className="mb-12">
+        <div className={wrapperClasses}>
             <div className="bg-card rounded-2xl shadow-card border border-slate-100 overflow-hidden">
                 {/* NOVO: Cabeçalho clicável com o botão de minimizar */}
                 <div 

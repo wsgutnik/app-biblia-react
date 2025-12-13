@@ -12,11 +12,18 @@ const TABS_CONFIG = [
 
 function Tabs({ activeTab, setActiveTab }) {
   return (
-    <div className="mb-8">
-      <div className="bg-card border border-slate-200 rounded-2xl px-3 py-2 shadow-sm">
+    <div className="hidden lg:block">
+      <div className="rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Navegação</p>
+            <p className="text-sm text-slate-500">Escolha um modo de estudo</p>
+          </div>
+          <span className="text-xs font-semibold uppercase text-slate-400">Desktop</span>
+        </div>
         <nav
-          className="flex flex-wrap gap-2 sm:gap-3 justify-center sm:justify-start"
-          aria-label="Tabs"
+          className="mt-4 flex flex-wrap gap-3"
+          aria-label="Seções principais"
         >
           {TABS_CONFIG.map((tab) => {
             const isActive = activeTab === tab.id;
@@ -24,16 +31,11 @@ function Tabs({ activeTab, setActiveTab }) {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition shadow-sm ${
+                className={`rounded-full border px-6 py-2 text-sm font-semibold transition ${
                   isActive
-                    ? 'text-white shadow-lg'
-                    : 'bg-white text-brand-700 hover:text-brand-900'
+                    ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
+                    : 'border-slate-200 text-slate-700 hover:border-slate-300'
                 }`}
-                style={
-                  isActive
-                    ? { backgroundColor: 'var(--color-brand, #1d4ed8)' }
-                    : undefined
-                }
               >
                 {tab.label}
               </button>

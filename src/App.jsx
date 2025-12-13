@@ -7,6 +7,10 @@ import Streak from './components/Streak';
 import HeroAuthPanel from './components/HeroAuthPanel';
 import { loadStrongs } from './utils/loadStrongsdict';
 import { isAuth0Configured } from './config/auth0.js';
+import PrimaryNav from './components/PrimaryNav';
+import MobileNav from './components/MobileNav';
+import ReadingPlansPanel from './components/ReadingPlansPanel';
+import VideoHighlightPanel from './components/VideoHighlightPanel';
 
 const Reader = lazy(() => import('./components/Reader'));
 const Search = lazy(() => import('./components/Search'));
@@ -114,58 +118,118 @@ function App() {
   }
   
   return (
-    <div className="bg-surface min-h-screen">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <header className="relative mb-10 overflow-hidden rounded-3xl bg-card px-6 py-8 shadow-card border border-slate-100">
-          <div className="absolute inset-0 bg-gradient-to-r from-brand-50/80 via-transparent to-transparent pointer-events-none" aria-hidden="true" />
-          <div className="relative z-10 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-center sm:text-left">
-              <p className="text-xs uppercase tracking-[0.35em] text-brand-500">ADBelem</p>
-              <h1 className="text-4xl font-extrabold text-brand-900 mt-2">Bíblia Sagrada</h1>
-              <p className="text-base text-slate-600 mt-2">Uma experiência moderna de leitura, estudo e pesquisa bíblica.</p>
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-24 lg:pb-0">
+      <PrimaryNav />
+      <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} />
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <section className="rounded-3xl border border-slate-200 bg-white/90 px-6 py-7 shadow-sm">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Continuar estudo</p>
+              <h1 className="mt-2 text-3xl font-bold text-slate-900">Bíblia Sagrada ADBelem</h1>
+              <p className="mt-2 text-sm text-slate-500 max-w-xl">
+                Configure planos anuais por livros, acompanhe o progresso do seu perfil e mergulhe nos vídeos da ADBelem USA sem sair do painel.
+              </p>
             </div>
-            <div className="self-center sm:self-auto flex flex-col items-center sm:items-end gap-4 w-full sm:w-auto">
-              {isAuth0Configured && <HeroAuthPanel />}
-              <Streak />
+            <div className="flex flex-wrap gap-2">
+              <button className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300">
+                Histórico rápido
+              </button>
+              <button className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300">
+                Dicionário Strong
+              </button>
+              <button className="rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-black">
+                Ler agora
+              </button>
             </div>
           </div>
-        </header>
-        
-        {/* VERSO DO DIA DE VOLTA AO TOPO */}
-        <VerseOfTheDay bibleData={bibleData} />
-        
+        </section>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <ReadingPlansPanel />
+          <VideoHighlightPanel />
+        </div>
+
         <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
-        
-        <main className="mt-8">
-          <Suspense fallback={<div className="rounded-3xl bg-card border border-slate-100 shadow-card p-8 text-center text-slate-500">Carregando conteúdo...</div>}>
-            {(() => {
-              switch (activeTab) {
-                case 'reader':
-                  return (
-                    <Reader
-                      bibleData={bibleData}
-                      initialChapter={initialChapter}
-                      setInitialChapter={setInitialChapter}
-                    />
-                  );
-                case 'search':
-                  return <Search bibleData={bibleData} />;
-                case 'dictionary':
-                  return <Dictionary greekDict={dicts.greek} hebrewDict={dicts.hebrew} bibleData={bibleData} />;
-                case 'commentary':
-                  return <Commentary commentaryData={commentaryData} bibleData={bibleData} />;
-                case 'quiz':
-                  return <Quiz />;
-                case 'history':
-                  return <History onNavigate={handleNavigateFromHistory} />;
-                case 'profile':
-                  return <Profile />;
-                default:
-                  return null;
-              }
-            })()}
-          </Suspense>
-        </main>
+
+        <div className="grid gap-8 lg:grid-cols-[3fr,2fr]">
+          <main className="rounded-3xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm">
+            <Suspense fallback={<div className="rounded-2xl border border-slate-100 bg-white p-8 text-center text-slate-500">Carregando conteúdo...</div>}>
+              {(() => {
+                switch (activeTab) {
+                  case 'reader':
+                    return (
+                      <Reader
+                        bibleData={bibleData}
+                        initialChapter={initialChapter}
+                        setInitialChapter={setInitialChapter}
+                      />
+                    );
+                  case 'search':
+                    return <Search bibleData={bibleData} />;
+                  case 'dictionary':
+                    return <Dictionary greekDict={dicts.greek} hebrewDict={dicts.hebrew} bibleData={bibleData} />;
+                  case 'commentary':
+                    return <Commentary commentaryData={commentaryData} bibleData={bibleData} />;
+                  case 'quiz':
+                    return <Quiz />;
+                  case 'history':
+                    return <History onNavigate={handleNavigateFromHistory} />;
+                  case 'profile':
+                    return <Profile />;
+                  default:
+                    return null;
+                }
+              })()}
+            </Suspense>
+          </main>
+
+          <aside className="space-y-6">
+            {isAuth0Configured && (
+              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <HeroAuthPanel />
+              </div>
+            )}
+
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Sequência diária</p>
+              <p className="mt-2 text-sm text-slate-500">Reforce o hábito de leitura mantendo sua sequência ativa.</p>
+              <div className="mt-4">
+                <Streak />
+              </div>
+              <button className="mt-4 text-sm font-semibold text-brand-700 hover:text-brand-900">
+                Ver atividade completa &rarr;
+              </button>
+            </div>
+
+            <VerseOfTheDay bibleData={bibleData} className="w-full" />
+
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+                  <img
+                    src="/logos/Bethlehem-Brasao-Novo-black.png"
+                    alt="Logo ADBelem"
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Obtenha o app ADBelem</p>
+                  <p className="text-xs text-slate-500">Leia planos, receba notificações e continue no mobile.</p>
+                </div>
+              </div>
+              <button className="mt-4 w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-black">
+                Usar app
+              </button>
+              <div className="mt-3 space-y-2 text-sm text-slate-600">
+                <button className="block w-full text-left hover:text-slate-900">Ajuda &amp; suporte</button>
+                <button className="block w-full text-left hover:text-slate-900">Definições da conta</button>
+                <button className="block w-full text-left hover:text-slate-900">Terminar sessão</button>
+              </div>
+            </div>
+          </aside>
+        </div>
       </div>
     </div>
   );
