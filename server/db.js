@@ -12,6 +12,9 @@ if (!process.env.DATABASE_URL) {
 
 const sslMode = (process.env.DATABASE_SSL || '').trim().toLowerCase();
 const disableSsl = sslMode === 'false' || sslMode === 'disable';
+if (disableSsl) {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: disableSsl ? false : { rejectUnauthorized: false }
