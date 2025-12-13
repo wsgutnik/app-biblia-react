@@ -3,9 +3,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import AuthActions from './AuthActions';
 import { isAuth0Configured } from '../config/auth0';
 import { CONGREGATIONS } from '../data/congregations';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-const API_PREFIX = '/api';
+import { API_PREFIX, authorizedJsonFetch } from '../utils/apiClient';
 const QUIZ_STORAGE_KEY = 'quiz_progress_v1';
 const READING_STORAGE_KEY = 'readingHistory';
 
@@ -124,31 +122,14 @@ function Profile() {
 
   const apiFetch = async (path, options = {}) => {
     if (!user?.sub) throw new Error('Usuário não autenticado');
-    const headers = new Headers(options.headers || {});
-    headers.set('x-user-sub', user.sub);
-    if (options.body && !headers.has('Content-Type')) {
-      headers.set('Content-Type', 'application/json');
-    }
-
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-      ...options,
-      headers
-    });
-
-    if (!response.ok) {
-      let message = 'Erro ao comunicar com o servidor';
-      try {
-        const data = await response.json();
-        message = data.error || message;
-      } catch {
-        const text = await response.text();
-        if (text) message = text;
-      }
-      throw new Error(message);
-    }
-
-    if (response.status === 204) return null;
-    return response.json();
+    const normalizedPath = `${API_PREFIX}${path}`.replace(/\/{2,}/g, '/');
+    const payload = {
+      path: normalizedPath,
+      method: options.method || 'GET',
+      body: options.body,
+      userSub: user.sub
+    };
+    return authorizedJsonFetch(payload);
   };
 
   useEffect(() => {
