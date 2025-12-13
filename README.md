@@ -39,7 +39,7 @@ Um microservidor Express em `server/` lê os dicionários Strong's (grego e hebr
 ```bash
 cd server
 npm install            # primeira vez
-cp .env.example .env   # preencha DATABASE_URL com o connection string do Supabase
+cp .env.example .env   # preencha DATABASE_URL com o connection string do Supabase (Pooler)
 npm start              # sobe o servidor em http://localhost:4000 (usa o banco remoto)
 ```
 
@@ -61,11 +61,11 @@ O projeto já inclui um `render.yaml` para publicar o backend no plano gratuito 
 1. Crie uma conta (ou faça login) no Render e autorize o acesso ao seu repositório do GitHub.
 2. Clique em **New > Blueprint** e selecione este repositório. O Render detectará o `render.yaml`.
 3. Dê um nome para o serviço (por exemplo `strongs-api`) e confirme. O build executará `cd server && npm install` e o start `cd server && npm start`.
-4. Antes ou depois de finalizar o deploy, defina a variável `DATABASE_URL` no painel do Render (Settings → Environment). Use o mesmo valor que colocou no `server/.env`.
+4. Antes ou depois de finalizar o deploy, defina as variáveis `DATABASE_URL` e `DATABASE_SSL=false` no painel do Render (Settings → Environment). Copie o connection string do Pooler do Supabase (porta 6543 + `?pgbouncer=true&sslmode=require`).
 5. Após o deploy, copie a URL pública (ex.: `https://strongs-api.onrender.com`) e atualize o front-end (`.env.local`) com `VITE_API_URL` apontando para esse endereço.
 
 Observações:
 
 - O Supabase/Postgres precisa estar criado antes do deploy. O seed roda automaticamente quando a tabela `entries` está vazia.
-- A variável `DATABASE_URL` segue o formato `postgresql://postgres.<project-ref>:<senha>@aws-0-us-east-1.pooler.supabase.com:5432/postgres`.
+- A variável `DATABASE_URL` segue o formato `postgresql://postgres.<project-ref>:<senha>@aws-0-<regiao>.pooler.supabase.com:6543/postgres?pgbouncer=true&sslmode=require`.
 - O plano gratuito hiberna após alguns minutos sem uso; a primeira requisição pode levar alguns segundos enquanto o container desperta.
