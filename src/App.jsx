@@ -179,47 +179,6 @@ function App() {
       <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {!isReaderExpanded && (
-          <>
-            <section className="rounded-3xl border border-slate-200 bg-white/90 px-6 py-7 shadow-sm">
-              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Continuar estudo</p>
-                  <h1 className="mt-2 text-3xl font-bold text-slate-900">Bíblia Sagrada ADBelem</h1>
-                  <p className="mt-2 text-sm text-slate-500 max-w-xl">
-                    Configure planos anuais por livros, acompanhe o progresso do seu perfil e mergulhe nos vídeos da ADBelem USA sem sair do painel.
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickAction('history')}
-                    className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300"
-                  >
-                    Histórico rápido
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickAction('dictionary')}
-                    className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300"
-                  >
-                    Dicionário Strong
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickAction('reader')}
-                    className="rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-black"
-                  >
-                    Ler agora
-                  </button>
-                </div>
-              </div>
-            </section>
-
-            <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
-          </>
-        )}
-
         <div className={`grid gap-8 ${isReaderExpanded ? '' : 'lg:grid-cols-[3fr,2fr]'}`}>
           <main
             ref={readerSectionRef}
@@ -307,10 +266,49 @@ function App() {
         </div>
 
         {!isReaderExpanded && (
-          <div className="grid gap-6 lg:grid-cols-2">
-            <ReadingPlansPanel />
-            <VideoHighlightPanel />
-          </div>
+          <>
+            <section className="rounded-3xl border border-slate-200 bg-white/90 px-6 py-7 shadow-sm">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Continuar estudo</p>
+                  <h1 className="mt-2 text-3xl font-bold text-slate-900">Bíblia Sagrada ADBelem</h1>
+                  <p className="mt-2 text-sm text-slate-500 max-w-xl">
+                    Configure planos anuais por livros, acompanhe o progresso do seu perfil e mergulhe nos vídeos da ADBelem USA sem sair do painel.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleQuickAction('history')}
+                    className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300"
+                  >
+                    Histórico rápido
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickAction('dictionary')}
+                    className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300"
+                  >
+                    Dicionário Strong
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickAction('reader')}
+                    className="rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-black"
+                  >
+                    Ler agora
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              <ReadingPlansPanel />
+              <VideoHighlightPanel />
+            </div>
+          </>
         )}
       </div>
     </div>

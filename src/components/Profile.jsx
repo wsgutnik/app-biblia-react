@@ -4,6 +4,7 @@ import AuthActions from './AuthActions';
 import { isAuth0Configured } from '../config/auth0';
 import { CONGREGATIONS } from '../data/congregations';
 import { API_PREFIX, authorizedJsonFetch } from '../utils/apiClient';
+import { fetchPlans } from '../utils/planService';
 const QUIZ_STORAGE_KEY = 'quiz_progress_v1';
 const READING_STORAGE_KEY = 'readingHistory';
 
@@ -74,7 +75,14 @@ const normalizeReadingHistory = (items = []) => {
 };
 
 function Profile() {
-  const { isAuthenticated, isLoading, user } = useAuth0();
+  const authContext = isAuth0Configured
+    ? useAuth0()
+    : {
+        isAuthenticated: false,
+        isLoading: false,
+        user: null
+      };
+  const { isAuthenticated, isLoading, user } = authContext;
 
   const userSub = user?.sub;
   const [notesDraft, setNotesDraft] = useState('');
@@ -97,6 +105,9 @@ function Profile() {
   });
   const [quizStats, setQuizStats] = useState(() => getLocalQuizStats());
   const [readingHistory, setReadingHistory] = useState(() => normalizeReadingHistory(getLocalReadingHistory()));
+  const [planOverview, setPlanOverview] = useState(null);
+  const [planLoading, setPlanLoading] = useState(false);
+  const [planError, setPlanError] = useState('');
 
   const [savedNotes, saveNotes] = usePersistentNotes(userSub);
 
@@ -160,6 +171,41 @@ function Profile() {
     };
 
     loadProfile();
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, user?.sub]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.sub) return;
+    let isMounted = true;
+    const loadPlanOverview = async () => {
+      setPlanLoading(true);
+      setPlanError('');
+      try {
+        const plans = await fetchPlans(user.sub);
+        if (!isMounted) return;
+        const selected = plans.find((plan) => plan.progress) || plans[0] || null;
+        if (selected) {
+          setPlanOverview({
+            title: selected.title || selected.slug,
+            currentDay: selected.progress?.currentDay || 0,
+            totalDays: selected.totalDays || 0,
+            updatedAt: selected.progress?.updatedAt || null
+          });
+        } else {
+          setPlanOverview(null);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setPlanError(err.message || 'Falha ao carregar planos');
+          setPlanOverview(null);
+        }
+      } finally {
+        if (isMounted) setPlanLoading(false);
+      }
+    };
+    loadPlanOverview();
     return () => {
       isMounted = false;
     };
