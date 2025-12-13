@@ -4,6 +4,7 @@ const { Pool } = require('pg');
 
 const rootDir = path.resolve(__dirname, '..');
 const publicDir = path.join(rootDir, 'public');
+const planDir = path.join(publicDir, 'plan');
 const ACTIVITY_HISTORY_LIMIT = 50;
 
 if (!process.env.DATABASE_URL) {
@@ -23,6 +24,27 @@ const pool = new Pool({
 pool.on('error', (err) => {
   console.error('Unexpected PostgreSQL error', err);
 });
+
+const slugify = (value = '') =>
+  value
+    .toString()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+const countPlanDays = (filePath) => {
+  try {
+    const contents = fs.readFileSync(filePath, 'utf8');
+    const lines = contents.split(/\r?\n/).filter((line) => line.trim());
+    if (lines.length <= 1) return 0;
+    return lines.length - 1;
+  } catch (err) {
+    console.warn(`Não foi possível contar dias para ${filePath}:`, err.message);
+    return 0;
+  }
+};
 
 async function ensureSchema() {
   await pool.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto";');
@@ -83,11 +105,47 @@ async function ensureSchema() {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS reading_plans (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug TEXT UNIQUE NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      file_path TEXT,
+      total_days INTEGER DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT now(),
+      updated_at TIMESTAMPTZ DEFAULT now()
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS plan_progress (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      auth0_sub TEXT NOT NULL,
+      plan_id UUID NOT NULL REFERENCES reading_plans(id) ON DELETE CASCADE,
+      current_day INTEGER DEFAULT 0,
+      completed_at DATE,
+      updated_at TIMESTAMPTZ DEFAULT now(),
+      UNIQUE(auth0_sub, plan_id)
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS reading_streaks (
+      auth0_sub TEXT PRIMARY KEY,
+      count INTEGER DEFAULT 0,
+      best_count INTEGER DEFAULT 0,
+      last_visit DATE,
+      updated_at TIMESTAMPTZ DEFAULT now()
+    );
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS congregations (
       id SERIAL PRIMARY KEY,
       name TEXT UNIQUE NOT NULL
     );
   `);
+  await seedReadingPlansMetadata();
 }
 
 function readDictionary(fileName) {
@@ -342,6 +400,158 @@ async function replaceReadingHistory(auth0Sub, entries = []) {
   }
 }
 
+async function insertReadingHistoryEntry(auth0Sub, entry = {}) {
+  const [sanitized] = normalizeHistoryInput([entry]);
+  if (!sanitized) return null;
+  const { rows } = await pool.query(
+    `
+      INSERT INTO reading_history (auth0_sub, book_abbrev, book_name, chapter, read_at)
+      VALUES ($1, $2, $3, $4, COALESCE($5, now()))
+      RETURNING auth0_sub, book_abbrev, book_name, chapter, read_at
+    `,
+    [auth0Sub, sanitized.book_abbrev, sanitized.book_name, sanitized.chapter, sanitized.read_at]
+  );
+  return rows[0] || null;
+}
+
+async function seedReadingPlansMetadata() {
+  if (!fs.existsSync(planDir)) return;
+  const files = fs.readdirSync(planDir).filter((file) => file.toLowerCase().endsWith('.csv'));
+  if (!files.length) return;
+  for (const fileName of files) {
+    const baseName = fileName.replace(/\.csv$/i, '');
+    const slug = slugify(baseName);
+    const title = baseName.replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const description = `Plano baseado no ficheiro ${fileName}`;
+    const totalDays = countPlanDays(path.join(planDir, fileName));
+    const relativePath = `plan/${fileName}`;
+    await pool.query(
+      `
+        INSERT INTO reading_plans (slug, title, description, file_path, total_days, updated_at)
+        VALUES ($1, $2, $3, $4, $5, now())
+        ON CONFLICT (slug) DO UPDATE SET
+          title = EXCLUDED.title,
+          description = EXCLUDED.description,
+          file_path = EXCLUDED.file_path,
+          total_days = EXCLUDED.total_days,
+          updated_at = now()
+      `,
+      [slug, title, description, relativePath, totalDays]
+    );
+  }
+}
+
+async function listReadingPlans() {
+  const { rows } = await pool.query(
+    `
+      SELECT id, slug, title, description, file_path, total_days
+      FROM reading_plans
+      ORDER BY title
+    `
+  );
+  return rows;
+}
+
+async function getReadingPlanById(planId) {
+  const { rows } = await pool.query(
+    `
+      SELECT id, slug, title, description, file_path, total_days
+      FROM reading_plans
+      WHERE id = $1
+    `,
+    [planId]
+  );
+  return rows[0] || null;
+}
+
+async function getPlanProgress(auth0Sub) {
+  const { rows } = await pool.query(
+    `
+      SELECT plan_id, current_day, completed_at, updated_at
+      FROM plan_progress
+      WHERE auth0_sub = $1
+    `,
+    [auth0Sub]
+  );
+  return rows;
+}
+
+async function upsertPlanProgress(auth0Sub, planId, data = {}) {
+  const currentDayValue = Number(data.currentDay ?? data.current_day);
+  const currentDay = Number.isFinite(currentDayValue) && currentDayValue >= 0 ? currentDayValue : 0;
+  const completedAt = sanitizeDate(data.completedAt ?? data.completed_at ?? null);
+
+  const { rows } = await pool.query(
+    `
+      INSERT INTO plan_progress (auth0_sub, plan_id, current_day, completed_at, updated_at)
+      VALUES ($1, $2, $3, $4, now())
+      ON CONFLICT (auth0_sub, plan_id) DO UPDATE SET
+        current_day = EXCLUDED.current_day,
+        completed_at = EXCLUDED.completed_at,
+        updated_at = now()
+      RETURNING plan_id, current_day, completed_at, updated_at
+    `,
+    [auth0Sub, planId, currentDay, completedAt]
+  );
+
+  return rows[0] || null;
+}
+
+const diffInDays = (a, b) => {
+  const MS_PER_DAY = 1000 * 60 * 60 * 24;
+  const utcA = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
+  const utcB = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
+  return Math.round((utcA - utcB) / MS_PER_DAY);
+};
+
+async function getReadingStreak(auth0Sub) {
+  const { rows } = await pool.query(
+    `
+      SELECT auth0_sub, count, best_count, last_visit, updated_at
+      FROM reading_streaks
+      WHERE auth0_sub = $1
+    `,
+    [auth0Sub]
+  );
+  return rows[0] || null;
+}
+
+async function recordReadingStreak(auth0Sub, performedAt = null) {
+  const existing = await getReadingStreak(auth0Sub);
+  const visitDateStr = sanitizeDate(performedAt) || sanitizeDate(new Date());
+  const visitDate = visitDateStr ? new Date(visitDateStr) : new Date();
+
+  let nextCount = 1;
+  if (existing?.last_visit) {
+    const lastVisit = new Date(existing.last_visit);
+    const delta = diffInDays(visitDate, lastVisit);
+    if (delta === 0) {
+      return existing;
+    }
+    if (delta === 1) {
+      nextCount = (existing.count || 0) + 1;
+    }
+  }
+
+  const nextBest = Math.max(existing?.best_count || 0, nextCount);
+
+  const { rows } = await pool.query(
+    `
+      INSERT INTO reading_streaks (auth0_sub, count, best_count, last_visit, updated_at)
+      VALUES ($1, $2, $3, $4, now())
+      ON CONFLICT (auth0_sub) DO UPDATE SET
+        count = EXCLUDED.count,
+        best_count = GREATEST(reading_streaks.best_count, EXCLUDED.best_count),
+        last_visit = EXCLUDED.last_visit,
+        updated_at = now()
+      RETURNING auth0_sub, count, best_count, last_visit, updated_at
+    `,
+    [auth0Sub, nextCount, nextBest, visitDateStr]
+  );
+
+  return rows[0];
+}
+
 module.exports = {
   pool,
   seedDatabase,
@@ -350,5 +560,12 @@ module.exports = {
   getQuizStats,
   upsertQuizStats,
   getReadingHistory,
-  replaceReadingHistory
+  replaceReadingHistory,
+  insertReadingHistoryEntry,
+  getReadingStreak,
+  recordReadingStreak,
+  listReadingPlans,
+  getReadingPlanById,
+  getPlanProgress,
+  upsertPlanProgress
 };

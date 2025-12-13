@@ -11,7 +11,14 @@ const {
   getQuizStats,
   upsertQuizStats,
   getReadingHistory,
-  replaceReadingHistory
+  replaceReadingHistory,
+  insertReadingHistoryEntry,
+  getReadingStreak,
+  recordReadingStreak,
+  listReadingPlans,
+  getReadingPlanById,
+  getPlanProgress,
+  upsertPlanProgress
 } = require('./db');
 
 const API_PREFIX = '/api';
@@ -75,6 +82,32 @@ const mapHistoryRows = (rows = []) =>
     timestamp: row.read_at ? new Date(row.read_at).toISOString() : null
   }));
 
+const mapStreakRow = (row) =>
+  row
+    ? {
+        count: row.count || 0,
+        bestCount: row.best_count || 0,
+        lastVisit: row.last_visit || null,
+        updatedAt: row.updated_at || null
+      }
+    : { count: 0, bestCount: 0, lastVisit: null, updatedAt: null };
+
+const mapPlanRow = (plan, progress = null) => ({
+  id: plan.id,
+  slug: plan.slug,
+  title: plan.title,
+  description: plan.description || '',
+  filePath: plan.file_path || '',
+  totalDays: plan.total_days || 0,
+  progress: progress
+    ? {
+        currentDay: progress.current_day || 0,
+        completedAt: progress.completed_at || null,
+        updatedAt: progress.updated_at || null
+      }
+    : null
+});
+
 secureRouter.get('/activities', async (req, res) => {
   try {
     const quizStats = (await getQuizStats(req.auth0Sub)) || { correct: 0, total: 0 };
@@ -109,6 +142,81 @@ secureRouter.put('/activities', async (req, res) => {
   } catch (err) {
     console.error('Failed to sync activities:', err.message);
     res.status(500).json({ error: 'Erro ao sincronizar atividades' });
+  }
+});
+
+secureRouter.post('/history', async (req, res) => {
+  try {
+    const saved = await insertReadingHistoryEntry(req.auth0Sub, req.body || {});
+    if (!saved) {
+      return res.status(400).json({ error: 'Entrada de histórico inválida' });
+    }
+    res.status(201).json({ entry: mapHistoryRows([saved])[0] });
+  } catch (err) {
+    console.error('Failed to append history:', err.message);
+    res.status(500).json({ error: 'Erro ao registar histórico de leitura' });
+  }
+});
+
+secureRouter.get('/streak', async (req, res) => {
+  try {
+    const streak = await getReadingStreak(req.auth0Sub);
+    res.json({ streak: mapStreakRow(streak) });
+  } catch (err) {
+    console.error('Failed to load streak:', err.message);
+    res.status(500).json({ error: 'Erro ao carregar sequência de leitura' });
+  }
+});
+
+secureRouter.get('/plans', async (req, res) => {
+  try {
+    const plans = await listReadingPlans();
+    const progressRows = await getPlanProgress(req.auth0Sub);
+    const progressMap = progressRows.reduce((acc, progress) => {
+      acc[progress.plan_id] = progress;
+      return acc;
+    }, {});
+    res.json({
+      plans: plans.map((plan) => mapPlanRow(plan, progressMap[plan.id]))
+    });
+  } catch (err) {
+    console.error('Failed to load plans:', err.message);
+    res.status(500).json({ error: 'Erro ao carregar planos' });
+  }
+});
+
+secureRouter.put('/plans/:planId/progress', async (req, res) => {
+  const { planId } = req.params;
+  try {
+    const plan = await getReadingPlanById(planId);
+    if (!plan) {
+      return res.status(404).json({ error: 'Plano não encontrado' });
+    }
+    const progress = await upsertPlanProgress(req.auth0Sub, planId, req.body || {});
+    res.json({
+      plan: mapPlanRow(plan, progress),
+      progress: progress
+        ? {
+            currentDay: progress.current_day || 0,
+            completedAt: progress.completed_at || null,
+            updatedAt: progress.updated_at || null
+          }
+        : null
+    });
+  } catch (err) {
+    console.error('Failed to save plan progress:', err.message);
+    res.status(500).json({ error: 'Erro ao atualizar progresso do plano' });
+  }
+});
+
+secureRouter.post('/streak', async (req, res) => {
+  try {
+    const payload = req.body || {};
+    const streak = await recordReadingStreak(req.auth0Sub, payload.performedAt);
+    res.json({ streak: mapStreakRow(streak) });
+  } catch (err) {
+    console.error('Failed to record streak:', err.message);
+    res.status(500).json({ error: 'Erro ao atualizar sequência de leitura' });
   }
 });
 
