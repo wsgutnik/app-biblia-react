@@ -11,6 +11,7 @@ import PrimaryNav from './components/PrimaryNav';
 import MobileNav from './components/MobileNav';
 import ReadingPlansPanel from './components/ReadingPlansPanel';
 import VideoHighlightPanel from './components/VideoHighlightPanel';
+import GlobalMenu from './components/GlobalMenu';
 
 const Reader = lazy(() => import('./components/Reader'));
 const Search = lazy(() => import('./components/Search'));
@@ -41,6 +42,7 @@ function App() {
   const [streakRefreshKey, setStreakRefreshKey] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [isReaderExpanded, setIsReaderExpanded] = useState(false);
+  const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
 
   useEffect(() => {
     const loadAllData = async () => {
@@ -166,7 +168,14 @@ function App() {
   
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-24 lg:pb-0">
-      <PrimaryNav onSearch={handleGlobalSearch} />
+      <PrimaryNav onSearch={handleGlobalSearch} onToggleMenu={() => setIsMenuDrawerOpen((prev) => !prev)} />
+      <GlobalMenu
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onQuickAction={handleQuickAction}
+        isDrawerOpen={isMenuDrawerOpen}
+        setDrawerOpen={setIsMenuDrawerOpen}
+      />
       <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -206,11 +215,6 @@ function App() {
                 </div>
               </div>
             </section>
-
-            <div className="grid gap-6 lg:grid-cols-2">
-              <ReadingPlansPanel />
-              <VideoHighlightPanel />
-            </div>
 
             <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
           </>
@@ -301,6 +305,13 @@ function App() {
             </aside>
           )}
         </div>
+
+        {!isReaderExpanded && (
+          <div className="grid gap-6 lg:grid-cols-2">
+            <ReadingPlansPanel />
+            <VideoHighlightPanel />
+          </div>
+        )}
       </div>
     </div>
   );

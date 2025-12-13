@@ -8,11 +8,12 @@ const navLinks = [
   { id: 'videos', label: 'Vídeos' },
 ];
 
-const IconButton = ({ label, children }) => (
+const IconButton = ({ label, children, onClick }) => (
   <button
     type="button"
     className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 text-slate-600 hover:border-slate-400 hover:text-slate-900 transition"
     aria-label={label}
+    onClick={onClick}
   >
     {children}
   </button>
@@ -141,7 +142,7 @@ const AccountMenuAuth = () => {
 
 const AccountMenu = () => (isAuth0Configured ? <AccountMenuAuth /> : <AccountMenuFallback />);
 
-function PrimaryNav({ onSearch }) {
+function PrimaryNav({ onSearch, onToggleMenu }) {
   const [term, setTerm] = useState('');
 
   const handleSearchSubmit = (event) => {
@@ -191,7 +192,7 @@ function PrimaryNav({ onSearch }) {
             <IconButton label="Alterar idioma">
               <GlobeIcon />
             </IconButton>
-            <IconButton label="Abrir menu">
+            <IconButton label="Abrir menu" onClick={onToggleMenu}>
               <MenuIcon />
             </IconButton>
             <IconButton label="Mais opções">

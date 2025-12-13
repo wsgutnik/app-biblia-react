@@ -66,7 +66,7 @@ const normalizeReadingHistory = (items = []) => {
       return {
         bookAbbrev: entry.bookAbbrev || entry.book_abbrev || '',
         bookName: entry.bookName || entry.book_name || '',
-        chapter: Number.isFinite(chapterNumber) ? chapterNumber : entry.chapter || '',
+        chapter: Number.isFinite(chapterNumber) ? chapterNumber : null,
         timestamp: timestamp ?? Date.now()
       };
     })
@@ -226,7 +226,7 @@ function Profile() {
         setProfileData({
           fullName: data.profile.fullName || profileData.fullName,
           congregation: data.profile.congregation || '',
-          birthDate: data.profile.birthDate || '',
+          birthDate: formatDateForInput(data.profile.birthDate),
           maritalStatus: data.profile.maritalStatus || ''
         });
       }
