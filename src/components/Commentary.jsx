@@ -67,9 +67,9 @@ function Commentary({ commentaryData, bibleData }) {
         if (selectedAuthor !== 'Todos') {
             comments = comments.filter(c => c.father_name === selectedAuthor);
         }
-        
+
         return comments;
-    }, [book, chapter, selectedAuthor, commentaryData, selectedBookInfo]);
+    }, [chapter, selectedAuthor, commentaryData, selectedBookInfo]);
 
     return (
         <div className="space-y-6 animate-fade-in">
