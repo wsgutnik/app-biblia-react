@@ -122,7 +122,7 @@ function Profile() {
 
   const apiFetch = async (path, options = {}) => {
     if (!user?.sub) throw new Error('Usuário não autenticado');
-    const normalizedPath = `${API_PREFIX}${path}`.replace(/\/{2,}/g, '/');
+    const normalizedPath = `${API_PREFIX}${path}`.replace(/\/{2,}/g, '/').replace(/^\/\//, '/');
     const payload = {
       path: normalizedPath,
       method: options.method || 'GET',
@@ -139,7 +139,7 @@ function Profile() {
       setProfileLoading(true);
       setProfileError('');
       try {
-        const data = await apiFetch(`${API_PREFIX}/profile`);
+        const data = await apiFetch('/profile');
         if (!isMounted || !data?.profile) return;
         setProfileData({
           fullName: data.profile.fullName || user.name || '',
@@ -172,7 +172,7 @@ function Profile() {
       setActivitiesLoading(true);
       setActivitiesError('');
       try {
-        const data = await apiFetch(`${API_PREFIX}/activities`);
+        const data = await apiFetch('/activities');
         if (!isMounted) return;
         if (data?.quizStats) {
           setQuizStats({
@@ -218,7 +218,7 @@ function Profile() {
         birthDate: profileData.birthDate || null,
         maritalStatus: profileData.maritalStatus || null
       };
-      const data = await apiFetch(`${API_PREFIX}/profile`, {
+      const data = await apiFetch('/profile', {
         method: 'PUT',
         body: JSON.stringify(payload)
       });
@@ -251,7 +251,7 @@ function Profile() {
     setReadingHistory(localHistory);
 
     try {
-      await apiFetch(`${API_PREFIX}/activities`, {
+      await apiFetch('/activities', {
         method: 'PUT',
         body: JSON.stringify({
           quizStats: localQuiz,
