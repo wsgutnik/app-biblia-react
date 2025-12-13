@@ -10,10 +10,11 @@ if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is not set. Configure server/.env with your Supabase connection string.');
 }
 
-const sslEnabled = process.env.DATABASE_SSL !== 'false';
+const sslMode = (process.env.DATABASE_SSL || '').trim().toLowerCase();
+const shouldDisableSsl = sslMode === 'false' || sslMode === 'disable';
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: sslEnabled ? { rejectUnauthorized: false } : false
+  ssl: shouldDisableSsl ? false : { rejectUnauthorized: false }
 });
 
 pool.on('error', (err) => {
