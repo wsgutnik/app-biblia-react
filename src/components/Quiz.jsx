@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
 import Papa from 'papaparse';
 import { translateText } from '../utils/translate';
+import { isAuth0Configured } from '../config/auth0';
+import { syncQuizStats } from '../utils/activitiesService';
 
 const CSV_PATH = '/100_bible_trivia_rewritten.csv';
 const STORAGE_KEY = 'quiz_progress_v1';
@@ -18,6 +21,8 @@ function Quiz() {
   const [questionTranslation, setQuestionTranslation] = useState('');
   const [optionTranslations, setOptionTranslations] = useState([]);
   const [translationError, setTranslationError] = useState('');
+  const auth = isAuth0Configured ? useAuth0() : { isAuthenticated: false, user: null };
+  const { isAuthenticated, user } = auth;
 
   useEffect(() => {
     try {
@@ -33,6 +38,13 @@ function Quiz() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
   }, [progress]);
+
+  useEffect(() => {
+    if (!isAuth0Configured || !isAuthenticated || !user?.sub) return;
+    syncQuizStats(user.sub, progress).catch((err) =>
+      console.warn('Falha ao sincronizar progresso do quiz:', err)
+    );
+  }, [progress, isAuthenticated, user?.sub]);
 
   useEffect(() => {
     setLoading(true);

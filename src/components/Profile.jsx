@@ -444,8 +444,25 @@ function Profile() {
           </div>
           <div className="rounded-2xl border border-slate-100 bg-surface p-4 space-y-2">
             <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Plano de leitura</p>
-            <p className="text-3xl font-bold text-brand-900">{readingHistory.length}</p>
-            <p className="text-sm text-slate-500">Capítulos registrados. Último acesso em {lastPlanDate}.</p>
+            {planLoading ? (
+              <p className="text-sm text-slate-500">Carregando...</p>
+            ) : planOverview ? (
+              <>
+                <p className="text-3xl font-bold text-brand-900">
+                  Dia {planOverview.currentDay}
+                  {planOverview.totalDays ? ` / ${planOverview.totalDays}` : ''}
+                </p>
+                <p className="text-sm text-slate-500">
+                  {planOverview.title}
+                  {planOverview.updatedAt &&
+                    ` • Atualizado em ${new Date(planOverview.updatedAt).toLocaleDateString()}`}
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-slate-500">
+                {planError || 'Nenhum plano sincronizado ainda. Use o painel principal para iniciar um plano.'}
+              </p>
+            )}
           </div>
         </div>
         <div className="space-y-3">

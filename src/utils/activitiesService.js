@@ -9,3 +9,12 @@ export async function appendReadingHistory(userSub, entry) {
   });
   return result?.entry || null;
 }
+
+export async function syncQuizStats(userSub, stats) {
+  return authorizedJsonFetch({
+    path: `${API_PREFIX}/activities`,
+    method: 'PUT',
+    userSub,
+    body: JSON.stringify({ quizStats: stats })
+  });
+}

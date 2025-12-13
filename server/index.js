@@ -129,14 +129,33 @@ secureRouter.get('/activities', async (req, res) => {
 secureRouter.put('/activities', async (req, res) => {
   try {
     const payload = req.body || {};
-    const quiz = await upsertQuizStats(req.auth0Sub, payload.quizStats || {});
-    const historyCount = await replaceReadingHistory(req.auth0Sub, payload.readingHistory || []);
-    res.json({
-      quizStats: {
+    const quizPayload = payload.quizStats || null;
+    const historyPayload = Array.isArray(payload.readingHistory) ? payload.readingHistory : null;
+
+    let quizResult = null;
+    if (quizPayload) {
+      const quiz = await upsertQuizStats(req.auth0Sub, quizPayload);
+      quizResult = {
         correct: quiz.correct || 0,
         total: quiz.total || 0,
         updatedAt: quiz.updated_at || null
-      },
+      };
+    } else {
+      const quiz = await getQuizStats(req.auth0Sub);
+      quizResult = {
+        correct: quiz?.correct || 0,
+        total: quiz?.total || 0,
+        updatedAt: quiz?.updated_at || null
+      };
+    }
+
+    let historyCount = null;
+    if (historyPayload) {
+      historyCount = await replaceReadingHistory(req.auth0Sub, historyPayload);
+    }
+
+    res.json({
+      quizStats: quizResult,
       readingHistoryCount: historyCount
     });
   } catch (err) {
