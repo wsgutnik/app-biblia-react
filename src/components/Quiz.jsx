@@ -169,7 +169,7 @@ function Quiz() {
         <div>
           <p className="text-sm uppercase tracking-[0.4em] text-brand-500">Quiz Bíblico</p>
           <h2 className="text-3xl font-bold text-brand-900 mt-2">{selectedCategory}</h2>
-          <p className="text-slate-500">Desafie-se com perguntas reais do arquivo “100_bible_trivia_rewritten”.</p>
+          <p className="text-slate-500">Teste seus conhecimentos bíblicos com perguntas reais.</p>
         </div>
         <div className="bg-surface rounded-2xl border border-slate-100 p-4 text-center min-w-[180px]">
           <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Desempenho</p>
