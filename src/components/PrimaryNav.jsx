@@ -3,9 +3,10 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { isAuth0Configured } from '../config/auth0';
 
 const navLinks = [
-  { id: 'bible', label: 'Bíblia' },
-  { id: 'plans', label: 'Planos' },
-  { id: 'videos', label: 'Vídeos' },
+  { id: 'bible', label: 'Bíblia', tab: 'reader' },
+  { id: 'plans', label: 'Planos', href: '#reading-plans' },
+  { id: 'videos', label: 'Vídeos', href: '#video-library' },
+  { id: 'quiz', label: 'Quiz', tab: 'quiz' }
 ];
 
 const IconButton = ({ label, children, onClick }) => (
@@ -48,6 +49,11 @@ const SearchIcon = () => (
     <path d="m14 14 4 4" />
   </svg>
 );
+
+const dispatchTabNavigation = (tab) => {
+  if (!tab) return;
+  window.dispatchEvent(new CustomEvent('app:navigate', { detail: { tab } }));
+};
 
 const AccountMenuBase = ({ avatar, name, onProfile, onLogout, isAuthenticated }) => {
   const [open, setOpen] = useState(false);
@@ -103,9 +109,7 @@ const AccountMenuBase = ({ avatar, name, onProfile, onLogout, isAuthenticated })
   );
 };
 
-const dispatchProfileNavigation = () => {
-  window.dispatchEvent(new CustomEvent('app:navigate', { detail: { tab: 'profile' } }));
-};
+const dispatchProfileNavigation = () => dispatchTabNavigation('profile');
 
 const AccountMenuFallback = () => (
   <AccountMenuBase
@@ -171,14 +175,29 @@ function PrimaryNav({ onSearch, onToggleMenu }) {
               </div>
             </div>
             <nav className="hidden lg:flex items-center gap-4 text-sm font-semibold text-slate-600">
-              {navLinks.map((link) => (
-                <button
-                  key={link.id}
-                  className="px-3 py-1.5 rounded-full hover:bg-slate-100"
-                >
-                  {link.label}
-                </button>
-              ))}
+              {navLinks.map((link) => {
+                if (link.href) {
+                  return (
+                    <a
+                      key={link.id}
+                      href={link.href}
+                      className="px-3 py-1.5 rounded-full hover:bg-slate-100"
+                    >
+                      {link.label}
+                    </a>
+                  );
+                }
+                return (
+                  <button
+                    key={link.id}
+                    type="button"
+                    onClick={() => dispatchTabNavigation(link.tab)}
+                    className="px-3 py-1.5 rounded-full hover:bg-slate-100"
+                  >
+                    {link.label}
+                  </button>
+                );
+              })}
             </nav>
           </div>
 

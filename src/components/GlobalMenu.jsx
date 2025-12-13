@@ -5,6 +5,7 @@ const MENU_ITEMS = [
   { id: 'search', label: 'Busca', description: 'Palavras e referências' },
   { id: 'dictionary', label: 'Dicionário', description: 'Strong e léxicos' },
   { id: 'commentary', label: 'Comentários', description: 'Contexto histórico' },
+  { id: 'quiz', label: 'Quiz', description: 'Teste seus conhecimentos' },
   { id: 'plans', label: 'Planos', description: 'Rotinas personalizadas' },
   { id: 'history', label: 'Histórico', description: 'Últimas leituras' },
   { id: 'profile', label: 'Perfil', description: 'Dados e metas' },
@@ -13,6 +14,7 @@ const MENU_ITEMS = [
 const QUICK_ACTIONS = [
   { id: 'history', label: 'Histórico rápido' },
   { id: 'dictionary', label: 'Dicionário Strong' },
+  { id: 'quiz', label: 'Iniciar quiz' },
   { id: 'reader', label: 'Ler agora', primary: true },
 ];
 

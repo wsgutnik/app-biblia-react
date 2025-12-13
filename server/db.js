@@ -315,20 +315,44 @@ async function upsertQuizStats(auth0Sub, stats = {}) {
   const correct = Number.isFinite(correctValue) ? correctValue : 0;
   const total = Number.isFinite(totalValue) ? totalValue : 0;
 
-  const { rows } = await pool.query(
-    `
-      INSERT INTO quiz_stats (auth0_sub, correct, total, updated_at)
-      VALUES ($1, $2, $3, now())
-      ON CONFLICT (auth0_sub) DO UPDATE SET
-        correct = EXCLUDED.correct,
-        total = EXCLUDED.total,
-        updated_at = now()
-      RETURNING auth0_sub, correct, total, updated_at
-    `,
-    [auth0Sub, correct, total]
-  );
+  // Try updating first to support older databases that lack a unique constraint on auth0_sub.
+  const performUpdate = async () => {
+    const { rows } = await pool.query(
+      `
+        UPDATE quiz_stats
+        SET correct = $2,
+            total = $3,
+            updated_at = now()
+        WHERE auth0_sub = $1
+        RETURNING auth0_sub, correct, total, updated_at
+      `,
+      [auth0Sub, correct, total]
+    );
+    return rows[0] || null;
+  };
 
-  return rows[0];
+  const existing = await performUpdate();
+  if (existing) {
+    return existing;
+  }
+
+  try {
+    const insertResult = await pool.query(
+      `
+        INSERT INTO quiz_stats (auth0_sub, correct, total, updated_at)
+        VALUES ($1, $2, $3, now())
+        RETURNING auth0_sub, correct, total, updated_at
+      `,
+      [auth0Sub, correct, total]
+    );
+    return insertResult.rows[0];
+  } catch (err) {
+    if (err?.code === '23505') {
+      const retry = await performUpdate();
+      if (retry) return retry;
+    }
+    throw err;
+  }
 }
 
 async function getReadingHistory(auth0Sub, limit = ACTIVITY_HISTORY_LIMIT) {

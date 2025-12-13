@@ -4,6 +4,7 @@ const NAV_ITEMS = [
   { id: 'reader', label: 'Bíblia', icon: 'home' },
   { id: 'search', label: 'Busca', icon: 'search' },
   { id: 'dictionary', label: 'Dicio.', icon: 'book' },
+  { id: 'quiz', label: 'Quiz', icon: 'quiz' },
   { id: 'commentary', label: 'Coments', icon: 'spark' },
   { id: 'history', label: 'Hist.', icon: 'menu' },
 ];
@@ -46,6 +47,13 @@ const icons = {
       <path d="M4 7h16" />
       <path d="M4 12h16" />
       <path d="M4 17h16" />
+    </svg>
+  ),
+  quiz: (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+      <path d="M9 9a3 3 0 1 1 3 3v2" />
+      <circle cx="12" cy="18" r="1" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="9" />
     </svg>
   ),
 };
