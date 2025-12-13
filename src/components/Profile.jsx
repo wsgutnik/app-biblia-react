@@ -22,6 +22,13 @@ const readLocalJson = (key, fallback) => {
 const getLocalQuizStats = () => readLocalJson(QUIZ_STORAGE_KEY, { correct: 0, total: 0 });
 const getLocalReadingHistory = () => readLocalJson(READING_STORAGE_KEY, []);
 
+const formatDateForInput = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toISOString().slice(0, 10);
+};
+
 const usePersistentNotes = (userSub) => {
   const storageKey = userSub ? `profile_notes_${userSub}` : null;
   const [notes, setNotes] = useState('');
@@ -156,7 +163,7 @@ function Profile() {
         setProfileData({
           fullName: data.profile.fullName || user.name || '',
           congregation: data.profile.congregation || '',
-          birthDate: data.profile.birthDate || '',
+          birthDate: formatDateForInput(data.profile.birthDate),
           maritalStatus: data.profile.maritalStatus || ''
         });
         setProfileLoaded(true);
