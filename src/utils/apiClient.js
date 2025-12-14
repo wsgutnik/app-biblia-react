@@ -8,7 +8,7 @@ const normalizeBaseUrl = (value) => {
 
 export const API_PREFIX = '/api';
 
-const API_BASE_URL = (() => {
+export const API_BASE_URL = (() => {
   const envValue = normalizeBaseUrl(import.meta.env.VITE_API_URL);
   if (envValue) return envValue;
   if (import.meta.env.DEV) {
@@ -31,6 +31,37 @@ export async function authorizedJsonFetch({ path, method = 'GET', body, userSub 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
     headers,
+    body
+  });
+
+  if (!response.ok) {
+    let message = 'Erro ao comunicar com o servidor';
+    try {
+      const data = await response.clone().json();
+      message = data.error || message;
+    } catch {
+      try {
+        const text = await response.text();
+        if (text) message = text;
+      } catch {
+        // ignore secondary failure
+      }
+    }
+    throw new Error(message);
+  }
+
+  return response.json();
+}
+
+export async function publicJsonFetch({ path, method = 'GET', body, headers }) {
+  const requestHeaders = new Headers(headers || {});
+  if (body && !requestHeaders.has('Content-Type')) {
+    requestHeaders.set('Content-Type', 'application/json');
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method,
+    headers: requestHeaders,
     body
   });
 

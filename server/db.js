@@ -145,6 +145,21 @@ async function ensureSchema() {
       name TEXT UNIQUE NOT NULL
     );
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS search_stats (
+      term TEXT NOT NULL,
+      language TEXT NOT NULL,
+      count INTEGER DEFAULT 1,
+      last_search TIMESTAMPTZ DEFAULT now(),
+      PRIMARY KEY (term, language)
+    );
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS search_stats_lang_last_idx
+      ON search_stats(language, last_search DESC);
+  `);
   await seedReadingPlansMetadata();
 }
 
@@ -261,6 +276,20 @@ const sanitizeDate = (value) => {
   return date.toISOString().slice(0, 10);
 };
 
+const normalizeLanguage = (value) => {
+  if (!value) return null;
+  const normalized = value.toString().trim().toLowerCase();
+  if (normalized === 'greek' || normalized === 'hebrew') {
+    return normalized;
+  }
+  return null;
+};
+
+const normalizeSearchTerm = (value) => {
+  const text = sanitizeText(value);
+  return text ? text.toLowerCase() : null;
+};
+
 async function getProfile(auth0Sub) {
   const { rows } = await pool.query(
     `
@@ -353,6 +382,49 @@ async function upsertQuizStats(auth0Sub, stats = {}) {
     }
     throw err;
   }
+}
+
+async function recordSearchStat(language, term) {
+  const normalizedLanguage = normalizeLanguage(language);
+  const normalizedTerm = normalizeSearchTerm(term);
+  if (!normalizedLanguage || !normalizedTerm) return null;
+
+  const { rows } = await pool.query(
+    `
+      INSERT INTO search_stats (term, language, count, last_search)
+      VALUES ($1, $2, 1, now())
+      ON CONFLICT (term, language) DO UPDATE SET
+        count = search_stats.count + 1,
+        last_search = now()
+      RETURNING term, language, count, last_search
+    `,
+    [normalizedTerm, normalizedLanguage]
+  );
+
+  return rows[0] || null;
+}
+
+async function getTopSearchStats(language, limit = 10) {
+  const normalizedLanguage = normalizeLanguage(language);
+  const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 50);
+
+  const params = [safeLimit];
+  let whereClause = '';
+  if (normalizedLanguage) {
+    whereClause = 'WHERE language = $1';
+    params.unshift(normalizedLanguage);
+  }
+
+  const sql = `
+    SELECT term, language, count, last_search
+    FROM search_stats
+    ${whereClause}
+    ORDER BY count DESC, last_search DESC
+    LIMIT $${params.length}
+  `;
+
+  const { rows } = await pool.query(sql, params);
+  return rows;
 }
 
 async function getReadingHistory(auth0Sub, limit = ACTIVITY_HISTORY_LIMIT) {
@@ -591,5 +663,7 @@ module.exports = {
   listReadingPlans,
   getReadingPlanById,
   getPlanProgress,
-  upsertPlanProgress
+  upsertPlanProgress,
+  recordSearchStat,
+  getTopSearchStats
 };

@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { translateText } from '../utils/translate';
+import { recordSearchTerm } from '../utils/trackingService';
 
 // --- Sub-componente para a nova página de detalhes da palavra ---
 const EntryDetailView = ({ entry, bibleData, onBack }) => {
@@ -151,7 +152,14 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
     setCurrentPage(1);
   };
   
-  const handleSearch = (e) => { e.preventDefault(); updateResults(term); };
+  const handleSearch = (e) => {
+    e.preventDefault();
+    const trimmed = term.trim();
+    updateResults(trimmed);
+    if (trimmed) {
+      recordSearchTerm(searchIn, trimmed);
+    }
+  };
   
   useEffect(() => { updateResults(); }, [processedDictionary]);
 

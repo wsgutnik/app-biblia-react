@@ -12,6 +12,7 @@ import MobileNav from './components/MobileNav';
 import ReadingPlansPanel from './components/ReadingPlansPanel';
 import VideoHighlightPanel from './components/VideoHighlightPanel';
 import GlobalMenu from './components/GlobalMenu';
+import TopSearchesPanel from './components/TopSearchesPanel';
 
 const Reader = lazy(() => import('./components/Reader'));
 const Search = lazy(() => import('./components/Search'));
@@ -308,6 +309,8 @@ function App() {
               <ReadingPlansPanel />
               <VideoHighlightPanel />
             </div>
+
+            <TopSearchesPanel />
           </>
         )}
       </div>

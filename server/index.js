@@ -18,7 +18,9 @@ const {
   listReadingPlans,
   getReadingPlanById,
   getPlanProgress,
-  upsertPlanProgress
+  upsertPlanProgress,
+  recordSearchStat,
+  getTopSearchStats
 } = require('./db');
 
 const API_PREFIX = '/api';
@@ -107,6 +109,22 @@ const mapPlanRow = (plan, progress = null) => ({
       }
     : null
 });
+
+const mapSearchStat = (row) =>
+  row
+    ? {
+        term: row.term,
+        language: row.language,
+        count: row.count || 0,
+        lastSearch: row.last_search || null
+      }
+    : null;
+
+const isValidSearchLanguage = (value) => {
+  if (!value) return false;
+  const normalized = value.toString().trim().toLowerCase();
+  return normalized === 'greek' || normalized === 'hebrew';
+};
 
 secureRouter.get('/activities', async (req, res) => {
   try {
@@ -240,6 +258,35 @@ secureRouter.post('/streak', async (req, res) => {
 });
 
 app.use(API_PREFIX, secureRouter);
+
+app.post('/tracking/search', async (req, res) => {
+  try {
+    const payload = req.body || {};
+    const saved = await recordSearchStat(payload.language, payload.term);
+    if (!saved) {
+      return res.status(400).json({ error: 'Parâmetros de busca inválidos' });
+    }
+    res.status(201).json({ stat: mapSearchStat(saved) });
+  } catch (err) {
+    console.error('Failed to track search term:', err.message);
+    res.status(500).json({ error: 'Erro ao registrar busca' });
+  }
+});
+
+app.get('/tracking/search/top', async (req, res) => {
+  const { language } = req.query;
+  const limit = parseInt(req.query.limit, 10) || 10;
+  if (!isValidSearchLanguage(language)) {
+    return res.status(400).json({ error: 'Parâmetro language inválido. Use greek ou hebrew.' });
+  }
+  try {
+    const stats = await getTopSearchStats(language, limit);
+    res.json({ stats: stats.map(mapSearchStat) });
+  } catch (err) {
+    console.error('Failed to load search leaderboard:', err.message);
+    res.status(500).json({ error: 'Erro ao consultar ranking de buscas' });
+  }
+});
 
 app.get('/health', (req, res) => {
   res.json({ ok: true });
