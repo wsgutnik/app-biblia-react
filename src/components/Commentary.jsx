@@ -102,7 +102,7 @@ function Commentary({ commentaryData, bibleData }) {
             </div>
 
             {/* Conteúdo Principal: Texto e Comentários */}
-            <div className="bg-card rounded-3xl shadow-card border border-slate-100 p-6 sm:p-8">
+            <div className="bg-card rounded-2xl shadow-card border border-slate-100 p-6 sm:p-8">
                 <h2 className="text-3xl font-bold text-brand-900 mb-6 border-b pb-4 border-slate-100">
                     Estudo de {selectedBookInfo?.name_pt} {chapter}
                 </h2>

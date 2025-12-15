@@ -152,7 +152,7 @@ function QuizContent({ auth }) {
 
   if (loading) {
     return (
-      <section className="bg-card rounded-3xl shadow-card border border-slate-100 p-6 sm:p-10">
+      <section className="bg-card rounded-2xl shadow-card border border-slate-100 p-6 sm:p-10">
         <p className="text-slate-500">Carregando perguntas...</p>
       </section>
     );
@@ -160,7 +160,7 @@ function QuizContent({ auth }) {
 
   if (error) {
     return (
-      <section className="bg-card rounded-3xl shadow-card border border-red-100 p-6 sm:p-10 text-red-600">
+      <section className="bg-card rounded-2xl shadow-card border border-red-100 p-6 sm:p-10 text-red-600">
         Falha ao carregar quiz: {error}
       </section>
     );
@@ -168,14 +168,14 @@ function QuizContent({ auth }) {
 
   if (!currentQuestion) {
     return (
-      <section className="bg-card rounded-3xl shadow-card border border-slate-100 p-6 sm:p-10 text-slate-500">
+      <section className="bg-card rounded-2xl shadow-card border border-slate-100 p-6 sm:p-10 text-slate-500">
         Nenhuma pergunta disponível para a categoria selecionada.
       </section>
     );
   }
 
   return (
-    <section className="bg-card rounded-3xl shadow-card border border-slate-100 p-6 sm:p-10 space-y-6">
+    <section className="bg-card rounded-2xl shadow-card border border-slate-100 p-6 sm:p-10 space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.4em] text-brand-500">Quiz Bíblico</p>

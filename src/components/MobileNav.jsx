@@ -61,7 +61,7 @@ const icons = {
 function MobileNav({ activeTab, setActiveTab }) {
   return (
     <nav className="fixed inset-x-0 bottom-0 border-t border-white/70 bg-white/95 backdrop-blur-md shadow-[0_-10px_40px_rgba(15,23,42,.12)]">
-      <div className="mx-auto flex w-full max-w-2xl items-center justify-between px-4 py-3 text-xs font-semibold text-slate-500">
+      <div className="mx-auto flex w-full items-center justify-between px-4 py-3 text-xs font-semibold text-slate-500">
         {NAV_ITEMS.map((item) => {
           const isActive = activeTab === item.id;
           return (

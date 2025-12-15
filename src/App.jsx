@@ -172,8 +172,8 @@ function App() {
         isDrawerOpen={isMenuDrawerOpen}
         setDrawerOpen={setIsMenuDrawerOpen}
       />
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pb-28 pt-6 sm:px-6">
-        <section className="rounded-3xl border border-white/70 bg-white p-5 shadow-card">
+      <div className="mx-auto flex w-full flex-col gap-6 px-4 pb-28 pt-6 sm:px-6">
+        <section className="rounded-2xl border border-white/70 bg-white p-5 shadow-card">
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Continuar estudo</p>
             <h1 className="text-2xl font-semibold text-slate-900">Bíblia Sagrada ADBelem</h1>
@@ -260,12 +260,12 @@ function App() {
         {!isReaderExpanded && (
           <>
             {isAuth0Configured && (
-              <div className="rounded-3xl border border-white/60 bg-white p-5 shadow-card">
+              <div className="rounded-2xl border border-white/60 bg-white p-5 shadow-card">
                 <HeroAuthPanel />
               </div>
             )}
 
-            <section className="rounded-3xl border border-white/60 bg-white p-5 shadow-card">
+            <section className="rounded-2xl border border-white/60 bg-white p-5 shadow-card">
               <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Sequência diária</p>
               <p className="mt-1 text-sm text-slate-500">
                 Reforce o hábito de leitura mantendo sua sequência viva.
@@ -275,7 +275,7 @@ function App() {
               </div>
             </section>
 
-            <VerseOfTheDay bibleData={bibleData} className="w-full rounded-3xl border border-white/60 bg-white shadow-card" />
+            <VerseOfTheDay bibleData={bibleData} className="w-full rounded-2xl border border-white/60 bg-white shadow-card" />
 
             <ReadingPlansPanel />
             <VideoHighlightPanel />

@@ -75,7 +75,7 @@ const AccountMenuBase = ({ avatar, name, onProfile, onLogout, isAuthenticated })
         <img src={avatar} alt={name} className="h-full w-full rounded-full object-cover" />
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-40 rounded-2xl border border-slate-200 bg-white shadow-lg p-2 text-sm text-slate-600">
+        <div className="absolute right-0 z-50 mt-2 w-40 rounded-2xl border border-slate-200 bg-white shadow-lg p-2 text-sm text-slate-600">
           <button
             type="button"
             onClick={() => {
@@ -153,7 +153,7 @@ function PrimaryNav({ onSearch, onToggleMenu }) {
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/70 bg-[#f6f8fb]/95 backdrop-blur">
-      <div className="mx-auto w-full max-w-2xl px-4 py-3 sm:px-6">
+      <div className="mx-auto w-full px-4 py-3 sm:px-6">
         <div className="flex items-center justify-between gap-3">
           <IconButton label="Abrir menu" onClick={onToggleMenu}>
             <MenuIcon />

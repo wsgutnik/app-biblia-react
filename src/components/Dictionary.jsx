@@ -87,7 +87,7 @@ const EntryDetailView = ({ entry, bibleData, onBack }) => {
   if (!entry) return null;
 
   return (
-    <div className="p-6 bg-card rounded-3xl shadow-card border border-slate-100">
+    <div className="p-6 bg-card rounded-2xl shadow-card border border-slate-100">
       <button onClick={onBack} className="mb-6 inline-flex items-center gap-2 text-brand-600 hover:text-brand-800 font-semibold">
         <span>←</span>
         Voltar
@@ -226,7 +226,7 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
   }
 
   return (
-    <section className="bg-card rounded-3xl shadow-card border border-slate-100 p-6 sm:p-8 min-h-[70vh] flex flex-col gap-8">
+    <section className="bg-card rounded-2xl shadow-card border border-slate-100 p-6 sm:p-8 min-h-[70vh] flex flex-col gap-8">
       {selectedEntry ? (
         <EntryDetailView
           entry={selectedEntry}

@@ -344,7 +344,7 @@ function ReaderContent({
   return (
     <div className="space-y-6 relative" onMouseUp={handleMouseUp} ref={readerRef}>
       <SharePopup text={selectedText} position={popupPosition} onShare={handleShare} />
-      <div className="rounded-3xl border border-slate-100 bg-slate-50/80 p-4 shadow-inner">
+      <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4 shadow-inner">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="inline-flex rounded-full bg-white p-1 shadow-inner">
             <button

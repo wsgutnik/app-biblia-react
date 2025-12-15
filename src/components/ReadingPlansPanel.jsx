@@ -252,7 +252,7 @@ function ReadingPlansPanelContent({ auth }) {
   return (
     <section
       id="reading-plans"
-      className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+      className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
     >
       <div className="flex flex-col gap-2">
         <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Planos de leitura</p>

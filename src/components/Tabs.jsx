@@ -12,7 +12,7 @@ const TABS_CONFIG = [
 
 function Tabs({ activeTab, setActiveTab }) {
   return (
-    <div className="rounded-3xl border border-white/60 bg-white px-4 py-4 shadow-card">
+    <div className="rounded-2xl border border-white/60 bg-white px-4 py-4 shadow-card">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Navegação</p>

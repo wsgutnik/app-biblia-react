@@ -314,7 +314,7 @@ function ProfileContent({ auth }) {
   const latestReads = useMemo(() => readingHistory.slice(0, 3), [readingHistory]);
   if (!isAuth0Configured) {
     return (
-      <section className="bg-card rounded-3xl shadow-card border border-slate-100 p-6 sm:p-10 text-center space-y-4">
+      <section className="bg-card rounded-2xl shadow-card border border-slate-100 p-6 sm:p-10 text-center space-y-4">
         <h2 className="text-2xl font-bold text-brand-900">Configuração necessária</h2>
         <p className="text-slate-600">
           Para habilitar login e perfil, defina as variáveis <code className="font-mono bg-slate-100 px-2 py-1 rounded">VITE_AUTH0_DOMAIN</code> e{' '}
@@ -327,7 +327,7 @@ function ProfileContent({ auth }) {
 
   return (
     <section className="space-y-6">
-      <div className="bg-card rounded-3xl shadow-card border border-slate-100 p-6 sm:p-8 flex flex-col gap-6">
+      <div className="bg-card rounded-2xl shadow-card border border-slate-100 p-6 sm:p-8 flex flex-col gap-6">
         <div>
           <h2 className="text-3xl font-bold text-brand-900">Conta</h2>
           <p className="text-slate-500">Gerencie seu acesso e dados pessoais.</p>
@@ -353,7 +353,7 @@ function ProfileContent({ auth }) {
         )}
       </div>
 
-      <div className="bg-card rounded-3xl shadow-card border border-slate-100 p-6 sm:p-8 space-y-4">
+      <div className="bg-card rounded-2xl shadow-card border border-slate-100 p-6 sm:p-8 space-y-4">
         <div>
           <h3 className="text-2xl font-semibold text-brand-900">Notas pessoais</h3>
           <p className="text-slate-500 text-sm">Escreva insights, pedidos de oração ou qualquer lembrete. Os dados ficam salvos neste navegador.</p>
@@ -386,7 +386,7 @@ function ProfileContent({ auth }) {
         )}
       </div>
 
-      <div className="bg-card rounded-3xl shadow-card border border-slate-100 p-6 sm:p-8 space-y-4">
+      <div className="bg-card rounded-2xl shadow-card border border-slate-100 p-6 sm:p-8 space-y-4">
         <div>
           <h3 className="text-2xl font-semibold text-brand-900">Dados pessoais & congregação</h3>
           <p className="text-slate-500 text-sm">Preencha para já pensar nas tabelas do Supabase enquanto o backend sincroniza.</p>
@@ -466,7 +466,7 @@ function ProfileContent({ auth }) {
         )}
       </div>
 
-      <div className="bg-card rounded-3xl shadow-card border border-slate-100 p-6 sm:p-8 space-y-6">
+      <div className="bg-card rounded-2xl shadow-card border border-slate-100 p-6 sm:p-8 space-y-6">
         <div>
           <h3 className="text-2xl font-semibold text-brand-900">Minhas atividades</h3>
           <p className="text-slate-500 text-sm">Resumo do quiz, plano de leitura e últimas leituras registradas neste dispositivo.</p>
