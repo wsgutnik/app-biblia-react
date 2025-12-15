@@ -29,10 +29,10 @@ function Tabs({ activeTab, setActiveTab }) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`min-w-[110px] rounded-full px-4 py-2 text-xs font-semibold transition ${
+              className={`min-w-[110px] rounded-full border px-4 py-2 text-xs font-semibold transition ${
                 isActive
-                  ? 'bg-slate-900 text-white shadow'
-                  : 'border border-slate-200 text-slate-700 hover:border-slate-300'
+                  ? 'border-slate-900 bg-slate-900 text-white shadow'
+                  : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
               }`}
             >
               {tab.label}
