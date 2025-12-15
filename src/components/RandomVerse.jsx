@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { BOOKS, VERSIONS } from '../data';
 
 function RandomVerse({ bibleData }) {
     const [version, setVersion] = useState(VERSIONS[0].id);
     const [verse, setVerse] = useState(null);
     
-    const fetchRandomVerse = () => {
+    const fetchRandomVerse = useCallback(() => {
         const versionData = bibleData[version];
         if (!versionData || versionData.length === 0) return;
         const randomVerseData = versionData[Math.floor(Math.random() * versionData.length)];
         const bookInfo = BOOKS.find(b => b.abbrev === randomVerseData.book_abbrev);
         setVerse({ ...randomVerseData, bookName: bookInfo ? bookInfo.name_pt : '?' });
-    };
+    }, [bibleData, version]);
 
     // useEffect is used to load the first random verse when the component appears
     // or when the selected version changes.
@@ -19,7 +19,7 @@ function RandomVerse({ bibleData }) {
         if (bibleData[version]) {
             fetchRandomVerse();
         }
-    }, [version, bibleData]);
+    }, [fetchRandomVerse, bibleData, version]);
 
     return (
         <div className="animate-fade-in">

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import AuthActions from './AuthActions';
 import { isAuth0Configured } from '../config/auth0';
@@ -74,15 +74,12 @@ const normalizeReadingHistory = (items = []) => {
     .slice(0, 50);
 };
 
-function Profile() {
-  const authContext = isAuth0Configured
-    ? useAuth0()
-    : {
-        isAuthenticated: false,
-        isLoading: false,
-        user: null
-      };
-  const { isAuthenticated, isLoading, user } = authContext;
+function ProfileContent({ auth }) {
+  const { isAuthenticated, isLoading, user } = auth ?? {
+    isAuthenticated: false,
+    isLoading: false,
+    user: null
+  };
 
   const userSub = user?.sub;
   const [notesDraft, setNotesDraft] = useState('');
@@ -131,7 +128,7 @@ function Profile() {
     }
   }, [user?.name, profileLoaded]);
 
-  const apiFetch = async (path, options = {}) => {
+  const apiFetch = useCallback(async (path, options = {}) => {
     if (!user?.sub) throw new Error('Usuário não autenticado');
     const normalizedPath = `${API_PREFIX}${path}`.replace(/\/{2,}/g, '/').replace(/^\/\//, '/');
     const payload = {
@@ -141,7 +138,7 @@ function Profile() {
       userSub: user.sub
     };
     return authorizedJsonFetch(payload);
-  };
+  }, [user?.sub]);
 
   useEffect(() => {
     if (!isAuthenticated || !user?.sub) return;
@@ -174,7 +171,7 @@ function Profile() {
     return () => {
       isMounted = false;
     };
-  }, [isAuthenticated, user?.sub]);
+  }, [apiFetch, isAuthenticated, user?.name, user?.sub]);
 
   useEffect(() => {
     if (!isAuthenticated || !user?.sub) return;
@@ -209,7 +206,7 @@ function Profile() {
     return () => {
       isMounted = false;
     };
-  }, [isAuthenticated, user?.sub]);
+  }, [apiFetch, isAuthenticated, user?.sub]);
 
   useEffect(() => {
     if (!isAuthenticated || !user?.sub) return;
@@ -244,7 +241,7 @@ function Profile() {
     return () => {
       isMounted = false;
     };
-  }, [isAuthenticated, user?.sub]);
+  }, [apiFetch, isAuthenticated, user?.sub]);
 
   const handleSaveNotes = () => {
     saveNotes(notesDraft);
@@ -315,10 +312,6 @@ function Profile() {
 
   const quizAccuracy = quizStats.total ? Math.round((quizStats.correct / quizStats.total) * 100) : 0;
   const latestReads = useMemo(() => readingHistory.slice(0, 3), [readingHistory]);
-  const lastPlanDate = readingHistory[0]?.timestamp
-    ? new Date(readingHistory[0].timestamp).toLocaleDateString()
-    : '—';
-
   if (!isAuth0Configured) {
     return (
       <section className="bg-card rounded-3xl shadow-card border border-slate-100 p-6 sm:p-10 text-center space-y-4">
@@ -554,4 +547,14 @@ function Profile() {
   );
 }
 
-export default Profile;
+function ProfileWithAuth(props) {
+  const auth = useAuth0();
+  return <ProfileContent {...props} auth={auth} />;
+}
+
+export default function Profile(props) {
+  if (!isAuth0Configured) {
+    return <ProfileContent {...props} auth={null} />;
+  }
+  return <ProfileWithAuth {...props} />;
+}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { BOOKS, VERSIONS } from '../data';
 
 function Search({ bibleData, initialQuery = '' }) {
@@ -7,7 +7,7 @@ function Search({ bibleData, initialQuery = '' }) {
     const [results, setResults] = useState(null);
     const [status, setStatus] = useState('');
 
-    const runSearch = (query) => {
+    const runSearch = useCallback((query) => {
         const formatted = query.trim();
         if (!formatted) {
             setResults(null);
@@ -24,7 +24,7 @@ function Search({ bibleData, initialQuery = '' }) {
         });
         setResults(enriched);
         setStatus(`${enriched.length} resultado${enriched.length === 1 ? '' : 's'} encontrados para "${formatted}".`);
-    };
+    }, [bibleData, version]);
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -36,13 +36,13 @@ function Search({ bibleData, initialQuery = '' }) {
             setTerm(initialQuery);
             runSearch(initialQuery);
         }
-    }, [initialQuery]);
+    }, [initialQuery, runSearch]);
 
     useEffect(() => {
         if (term) {
             runSearch(term);
         }
-    }, [version]);
+    }, [term, runSearch]);
 
     return (
         <div className="space-y-6">

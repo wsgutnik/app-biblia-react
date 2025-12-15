@@ -70,7 +70,7 @@ function Commentary({ commentaryData, bibleData }) {
         }
         
         return comments;
-    }, [book, chapter, selectedAuthor, commentaryData, selectedBookInfo]);
+    }, [chapter, selectedAuthor, commentaryData, selectedBookInfo]);
 
     const toggleVerseComments = (verseKey) => {
         setOpenVerses((prev) => ({

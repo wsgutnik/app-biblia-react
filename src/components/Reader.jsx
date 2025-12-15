@@ -56,7 +56,15 @@ const normalizeHighlightPayload = (payload = {}) => {
   }, {});
 };
 
-function Reader({ bibleData, initialChapter, setInitialChapter, onStreakRecorded, isFocused = false, onToggleFocus }) {
+function ReaderContent({
+  bibleData,
+  initialChapter,
+  setInitialChapter,
+  onStreakRecorded,
+  isFocused = false,
+  onToggleFocus,
+  auth
+}) {
   const [viewMode, setViewMode] = useState('single'); // 'single' ou 'compare'
   const [version1, setVersion1] = useState('almeida_rc');
   const [version2, setVersion2] = useState('kjv');
@@ -69,8 +77,7 @@ function Reader({ bibleData, initialChapter, setInitialChapter, onStreakRecorded
   const readerRef = useRef(null); // Ref para a área de leitura
   const lastStreakUpdateRef = useRef(null);
   const lastHistoryEntryRef = useRef(null);
-  const auth = isAuth0Configured ? useAuth0() : { isAuthenticated: false, user: null };
-  const { isAuthenticated, user } = auth;
+  const { isAuthenticated, user } = auth ?? { isAuthenticated: false, user: null };
   const [highlightedVerses, setHighlightedVerses] = useState(() => {
     if (typeof window === 'undefined') return {};
     try {
@@ -472,4 +479,14 @@ function Reader({ bibleData, initialChapter, setInitialChapter, onStreakRecorded
   );
 }
 
-export default Reader;
+function ReaderWithAuth(props) {
+  const auth = useAuth0();
+  return <ReaderContent {...props} auth={auth} />;
+}
+
+export default function Reader(props) {
+  if (!isAuth0Configured) {
+    return <ReaderContent {...props} auth={null} />;
+  }
+  return <ReaderWithAuth {...props} />;
+}

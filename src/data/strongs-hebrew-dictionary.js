@@ -1,3 +1,4 @@
+/* eslint-disable */
 if (typeof module === 'undefined') var module = { exports: {} };
 (function (module, exports) {
 // ...existing code...

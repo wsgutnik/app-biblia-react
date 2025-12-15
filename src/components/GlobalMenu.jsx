@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 const MENU_ITEMS = [
   { id: 'reader', label: 'Leitura', description: 'Capítulos e versões' },
@@ -19,7 +19,6 @@ const QUICK_ACTIONS = [
 ];
 
 function GlobalMenu({ activeTab, setActiveTab, onQuickAction, isDrawerOpen, setDrawerOpen }) {
-  const [isDesktopOpen, setIsDesktopOpen] = useState(false);
   const handleSelect = (id) => {
     setActiveTab(id);
     if (setDrawerOpen) setDrawerOpen(false);

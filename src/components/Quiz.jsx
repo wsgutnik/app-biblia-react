@@ -9,7 +9,7 @@ const CSV_PATH = '/100_bible_trivia_rewritten.csv';
 const STORAGE_KEY = 'quiz_progress_v1';
 const ANSWER_MAP = { A: 0, B: 1, C: 2, D: 3 };
 
-function Quiz() {
+function QuizContent({ auth }) {
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -21,8 +21,7 @@ function Quiz() {
   const [questionTranslation, setQuestionTranslation] = useState('');
   const [optionTranslations, setOptionTranslations] = useState([]);
   const [translationError, setTranslationError] = useState('');
-  const auth = isAuth0Configured ? useAuth0() : { isAuthenticated: false, user: null };
-  const { isAuthenticated, user } = auth;
+  const { isAuthenticated, user } = auth ?? { isAuthenticated: false, user: null };
 
   useEffect(() => {
     try {
@@ -311,4 +310,14 @@ function Quiz() {
   );
 }
 
-export default Quiz;
+function QuizWithAuth(props) {
+  const auth = useAuth0();
+  return <QuizContent {...props} auth={auth} />;
+}
+
+export default function Quiz(props) {
+  if (!isAuth0Configured) {
+    return <QuizContent {...props} auth={null} />;
+  }
+  return <QuizWithAuth {...props} />;
+}

@@ -22,14 +22,6 @@ const History = lazy(() => import('./components/History'));
 const Profile = lazy(() => import('./components/Profile'));
 const Quiz = lazy(() => import('./components/Quiz'));
 
-const loadScript = (src) => new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = src;
-    script.onload = resolve;
-    script.onerror = reject;
-    document.head.appendChild(script);
-});
-
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('Carregando Bíblias...');

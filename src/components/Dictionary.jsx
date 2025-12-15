@@ -1,17 +1,37 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { translateText } from '../utils/translate';
 import { recordSearchTerm } from '../utils/trackingService';
+
+const PT_TO_EN_MAP = {
+  amor: 'love',
+  fé: 'faith',
+  deus: 'god',
+  senhor: 'lord',
+  espírito: 'spirit',
+  salvação: 'salvation',
+  graça: 'grace',
+  pecado: 'sin',
+  justiça: 'righteousness',
+  coração: 'heart',
+  palavra: 'word',
+  luz: 'light',
+  vida: 'life',
+  morte: 'death'
+};
 
 // --- Sub-componente para a nova página de detalhes da palavra ---
 const EntryDetailView = ({ entry, bibleData, onBack }) => {
   const [translation, setTranslation] = useState('Traduzindo...');
 
-  // guard against missing entry (prevents render crashes)
-  if (!entry) return null;
-
-  // Efeito para traduzir a definição quando a palavra muda
   useEffect(() => {
     let isMounted = true;
+    if (!entry) {
+      setTranslation('Definição não disponível.');
+      return () => {
+        isMounted = false;
+      };
+    }
+
     const translateDefinition = async () => {
       if (!entry.strongs_def) {
         setTranslation('Definição não disponível.');
@@ -22,18 +42,20 @@ const EntryDetailView = ({ entry, bibleData, onBack }) => {
         if (isMounted) setTranslation(translatedText);
       } catch (error) {
         console.warn('Falha ao traduzir com Google Translate:', error);
-        if (isMounted) setTranslation("Não foi possível traduzir a definição automaticamente.");
+        if (isMounted) setTranslation('Não foi possível traduzir a definição automaticamente.');
       }
     };
 
     translateDefinition();
-    return () => { isMounted = false; };
-  }, [entry.strongs_def]);
+    return () => {
+      isMounted = false;
+    };
+  }, [entry]);
 
-  // Procura por todas as referências da palavra na Bíblia
   const references = useMemo(() => {
+    if (!entry) return [];
     const found = [];
-    const strongId = entry?.strong_number;
+    const strongId = entry.strong_number;
     const kjvStrongs = bibleData?.kjv_strongs;
     const almeidaRC = bibleData?.almeida_rc;
 
@@ -45,11 +67,11 @@ const EntryDetailView = ({ entry, bibleData, onBack }) => {
       if (!verse?.text) continue;
       if (!strongRegex.test(verse.text)) continue;
 
-      // find corresponding verse in Almeida (by book abbrev, chapter and verse)
-      const almeidaVerse = almeidaRC.find(v =>
-        v.book_abbrev === verse.book_abbrev &&
-        Number(v.chapter) === Number(verse.chapter) &&
-        Number(v.verse) === Number(verse.verse)
+      const almeidaVerse = almeidaRC.find(
+        (v) =>
+          v.book_abbrev === verse.book_abbrev &&
+          Number(v.chapter) === Number(verse.chapter) &&
+          Number(v.verse) === Number(verse.verse)
       );
 
       found.push({
@@ -60,7 +82,9 @@ const EntryDetailView = ({ entry, bibleData, onBack }) => {
     }
 
     return found;
-  }, [entry?.strong_number, bibleData]);
+  }, [entry, bibleData]);
+
+  if (!entry) return null;
 
   return (
     <div className="p-6 bg-card rounded-3xl shadow-card border border-slate-100">
@@ -104,20 +128,6 @@ const EntryDetailView = ({ entry, bibleData, onBack }) => {
 
 // --- Componente Principal do Dicionário (com paginação e busca inteligente) ---
 function Dictionary({ greekDict, hebrewDict, bibleData }) {
-  // debug log incoming props
-  useEffect(() => {
-    console.log('DEBUG Dictionary props:', { greekDict, hebrewDict, bibleData });
-    // expose a quick helper to inspect sample entries
-    window.__DICT_SAMPLE = {
-      greekSample: greekDict ? Object.keys(greekDict).slice(0,10) : null,
-      hebrewSample: hebrewDict ? Object.keys(hebrewDict).slice(0,10) : null
-    };
-  }, [greekDict, hebrewDict, bibleData]);
-
-  if (!greekDict && !hebrewDict) {
-    return <div style={{padding:20}}>Dicionários ausentes no componente Dictionary. Ver Console.</div>;
-  }
-
   const [term, setTerm] = useState('');
   const [searchIn, setSearchIn] = useState('greek');
   const [results, setResults] = useState([]);
@@ -125,7 +135,14 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 100;
 
-  const ptToEnMap = { 'amor': 'love', 'fé': 'faith', 'deus': 'god', 'senhor': 'lord', 'espírito': 'spirit', 'salvação': 'salvation', 'graça': 'grace', 'pecado': 'sin', 'justiça': 'righteousness', 'coração': 'heart', 'palavra': 'word', 'luz': 'light', 'vida': 'life', 'morte': 'death' };
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.__DICT_SAMPLE = {
+      greekSample: greekDict ? Object.keys(greekDict).slice(0, 10) : null,
+      hebrewSample: hebrewDict ? Object.keys(hebrewDict).slice(0, 10) : null
+    };
+    console.log('DEBUG Dictionary props:', { greekDict, hebrewDict, bibleData });
+  }, [greekDict, hebrewDict, bibleData]);
 
   const processedDictionary = useMemo(() => {
     const dict = searchIn === 'greek' ? greekDict : hebrewDict;
@@ -137,20 +154,30 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
     }));
   }, [searchIn, greekDict, hebrewDict]);
 
-  const updateResults = (searchTerm = '') => {
-    let filteredEntries = processedDictionary;
-    if (searchTerm) {
-      const lowerCaseTerm = searchTerm.toLowerCase();
-      const englishTerm = ptToEnMap[lowerCaseTerm];
-      filteredEntries = processedDictionary.filter(entry => {
-        const def = entry.strongs_def?.toLowerCase() || '';
-        const definitionMatch = englishTerm ? def.includes(englishTerm) || def.includes(lowerCaseTerm) : def.includes(lowerCaseTerm);
-        return entry.strong_number?.toLowerCase().includes(lowerCaseTerm) || entry.lemma?.toLowerCase().includes(lowerCaseTerm) || entry.translit?.toLowerCase().includes(lowerCaseTerm) || definitionMatch;
-      });
-    }
-    setResults(filteredEntries);
-    setCurrentPage(1);
-  };
+  const updateResults = useCallback(
+    (searchTerm = '') => {
+      let filteredEntries = processedDictionary;
+      if (searchTerm) {
+        const lowerCaseTerm = searchTerm.toLowerCase();
+        const englishTerm = PT_TO_EN_MAP[lowerCaseTerm];
+        filteredEntries = processedDictionary.filter((entry) => {
+          const def = entry.strongs_def?.toLowerCase() || '';
+          const definitionMatch = englishTerm
+            ? def.includes(englishTerm) || def.includes(lowerCaseTerm)
+            : def.includes(lowerCaseTerm);
+          return (
+            entry.strong_number?.toLowerCase().includes(lowerCaseTerm) ||
+            entry.lemma?.toLowerCase().includes(lowerCaseTerm) ||
+            entry.translit?.toLowerCase().includes(lowerCaseTerm) ||
+            definitionMatch
+          );
+        });
+      }
+      setResults(filteredEntries);
+      setCurrentPage(1);
+    },
+    [processedDictionary]
+  );
   
   const handleSearch = (e) => {
     e.preventDefault();
@@ -161,7 +188,9 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
     }
   };
   
-  useEffect(() => { updateResults(); }, [processedDictionary]);
+  useEffect(() => {
+    updateResults();
+  }, [updateResults]);
 
   const paginatedResults = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -176,6 +205,7 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
     setSearchIn(type);
     setSelectedEntry(null);
     setTerm('');
+    updateResults('');
   };
 
   const handleClear = () => {
@@ -190,6 +220,10 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
       return prev;
     });
   };
+
+  if (!greekDict && !hebrewDict) {
+    return <div style={{ padding: 20 }}>Dicionários ausentes no componente Dictionary. Ver Console.</div>;
+  }
 
   return (
     <section className="bg-card rounded-3xl shadow-card border border-slate-100 p-6 sm:p-8 min-h-[70vh] flex flex-col gap-8">

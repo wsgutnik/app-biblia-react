@@ -40,9 +40,8 @@ const updateLocalStreak = () => {
   return updated;
 };
 
-function Streak({ refreshToken = 0 }) {
-  const auth = isAuth0Configured ? useAuth0() : { isAuthenticated: false, user: null };
-  const { isAuthenticated, user } = auth;
+function StreakContent({ refreshToken = 0, auth }) {
+  const { isAuthenticated, user } = auth ?? { isAuthenticated: false, user: null };
   const [streakData, setStreakData] = useState(() => readLocalStreak());
   const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState('');
@@ -103,4 +102,14 @@ function Streak({ refreshToken = 0 }) {
   );
 }
 
-export default Streak;
+function StreakWithAuth(props) {
+  const auth = useAuth0();
+  return <StreakContent {...props} auth={auth} />;
+}
+
+export default function Streak(props) {
+  if (!isAuth0Configured) {
+    return <StreakContent {...props} auth={null} />;
+  }
+  return <StreakWithAuth {...props} />;
+}

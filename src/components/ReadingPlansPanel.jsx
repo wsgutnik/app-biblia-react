@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import Papa from 'papaparse';
 import { isAuth0Configured } from '../config/auth0';
@@ -72,7 +72,7 @@ const buildPlanSummary = ({ entries, name, slug, filePath }) => {
   };
 };
 
-function ReadingPlansPanel() {
+function ReadingPlansPanelContent({ auth }) {
   const [plans, setPlans] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -80,8 +80,7 @@ function ReadingPlansPanel() {
   const [progressLoading, setProgressLoading] = useState(false);
   const [progressError, setProgressError] = useState('');
   const [progressStatus, setProgressStatus] = useState('');
-  const auth = isAuth0Configured ? useAuth0() : { isAuthenticated: false, user: null };
-  const { isAuthenticated, user } = auth;
+  const { isAuthenticated, user } = auth ?? { isAuthenticated: false, user: null };
 
   useEffect(() => {
     const loadPlans = async () => {
@@ -149,7 +148,7 @@ function ReadingPlansPanel() {
     };
   }, [isAuthenticated, user?.sub]);
 
-  const handleAdvancePlan = async (planSlug, fallbackTotal) => {
+  const handleAdvancePlan = useCallback(async (planSlug, fallbackTotal) => {
     if (!isAuth0Configured || !isAuthenticated || !user?.sub) return;
     const remotePlan = remotePlans[planSlug];
     if (!remotePlan) return;
@@ -176,7 +175,7 @@ function ReadingPlansPanel() {
       console.error('Erro ao atualizar progresso do plano:', err);
       setProgressError(err.message || 'Falha ao atualizar progresso.');
     }
-  };
+  }, [isAuthenticated, remotePlans, user?.sub]);
 
   const content = useMemo(() => {
     if (isLoading) {
@@ -248,7 +247,7 @@ function ReadingPlansPanel() {
         </div>
       );
     });
-  }, [error, isLoading, plans, remotePlans, isAuthenticated, progressLoading]);
+  }, [error, isLoading, plans, remotePlans, isAuthenticated, progressLoading, handleAdvancePlan]);
 
   return (
     <section
@@ -285,4 +284,14 @@ function ReadingPlansPanel() {
   );
 }
 
-export default ReadingPlansPanel;
+function ReadingPlansPanelWithAuth(props) {
+  const auth = useAuth0();
+  return <ReadingPlansPanelContent {...props} auth={auth} />;
+}
+
+export default function ReadingPlansPanel(props) {
+  if (!isAuth0Configured) {
+    return <ReadingPlansPanelContent {...props} auth={null} />;
+  }
+  return <ReadingPlansPanelWithAuth {...props} />;
+}

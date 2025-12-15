@@ -32,4 +32,6 @@ const Root = () => {
   );
 };
 
+export { Root };
+
 ReactDOM.createRoot(document.getElementById('root')).render(<Root />);
