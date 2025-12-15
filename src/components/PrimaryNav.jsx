@@ -2,17 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { isAuth0Configured } from '../config/auth0';
 
-const navLinks = [
-  { id: 'bible', label: 'Bíblia', tab: 'reader' },
-  { id: 'plans', label: 'Planos', href: '#reading-plans' },
-  { id: 'videos', label: 'Vídeos', href: '#video-library' },
-  { id: 'quiz', label: 'Quiz', tab: 'quiz' }
-];
-
 const IconButton = ({ label, children, onClick }) => (
   <button
     type="button"
-    className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 text-slate-600 hover:border-slate-400 hover:text-slate-900 transition"
+    className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
     aria-label={label}
     onClick={onClick}
   >
@@ -159,60 +152,25 @@ function PrimaryNav({ onSearch, onToggleMenu }) {
   };
 
   return (
-    <header className="bg-white border-b border-slate-200">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3">
-              <img
-                src="/logos/Bethlehem-Brasao-Novo-black.png"
-                alt="ADBelem logo"
-                className="h-10 w-auto object-contain"
-              />
-              <div>
-                <p className="text-lg font-semibold text-slate-900">ADBelem</p>
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Bible</p>
-              </div>
-            </div>
-            <nav className="hidden lg:flex items-center gap-4 text-sm font-semibold text-slate-600">
-              {navLinks.map((link) => {
-                if (link.href) {
-                  return (
-                    <a
-                      key={link.id}
-                      href={link.href}
-                      className="px-3 py-1.5 rounded-full hover:bg-slate-100"
-                    >
-                      {link.label}
-                    </a>
-                  );
-                }
-                return (
-                  <button
-                    key={link.id}
-                    type="button"
-                    onClick={() => dispatchTabNavigation(link.tab)}
-                    className="px-3 py-1.5 rounded-full hover:bg-slate-100"
-                  >
-                    {link.label}
-                  </button>
-                );
-              })}
-            </nav>
+    <header className="sticky top-0 z-40 border-b border-white/70 bg-[#f6f8fb]/95 backdrop-blur">
+      <div className="mx-auto w-full max-w-2xl px-4 py-3 sm:px-6">
+        <div className="flex items-center justify-between gap-3">
+          <IconButton label="Abrir menu" onClick={onToggleMenu}>
+            <MenuIcon />
+          </IconButton>
+          <div className="text-center">
+            <p className="text-[11px] uppercase tracking-[0.4em] text-slate-400">Bethlehem Ministry</p>
+            <p className="text-sm font-semibold text-slate-900">A paz do Senhor!</p>
           </div>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            <a
-              href="#"
-              className="hidden sm:inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white hover:bg-black transition"
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700"
             >
-              Get the app
-            </a>
+              Doar
+            </button>
             <IconButton label="Alterar idioma">
               <GlobeIcon />
-            </IconButton>
-            <IconButton label="Abrir menu" onClick={onToggleMenu}>
-              <MenuIcon />
             </IconButton>
             <IconButton label="Mais opções">
               <DotsIcon />
@@ -221,37 +179,21 @@ function PrimaryNav({ onSearch, onToggleMenu }) {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <form onSubmit={handleSearchSubmit} className="relative flex-1 flex">
-            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-              <SearchIcon />
-            </span>
-            <input
-              type="text"
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-              placeholder="Pesquisar em toda a Bíblia..."
-              className="w-full rounded-full border border-slate-200 bg-slate-50 py-3 pl-12 pr-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-100"
-            />
-            <button type="submit" className="sr-only">Buscar</button>
-          </form>
-          <div className="flex gap-2 text-sm font-semibold text-slate-600 sm:ml-4">
-            <a
-              href="#reading-plans"
-              className="rounded-full border border-slate-200 px-4 py-2 text-slate-600 hover:border-slate-300 hover:text-slate-900 transition"
-            >
-              Continuar plano
-            </a>
-            <a
-              href="https://www.youtube.com/@adbelemusa"
-              target="_blank"
-              rel="noreferrer"
-              className="hidden md:inline-flex rounded-full border border-slate-200 px-4 py-2 text-slate-600 hover:border-slate-300 hover:text-slate-900 transition"
-            >
-              Explorar vídeos
-            </a>
-          </div>
-        </div>
+        <form onSubmit={handleSearchSubmit} className="mt-3 relative flex">
+          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+            <SearchIcon />
+          </span>
+          <input
+            type="text"
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            placeholder="Pesquisar em toda a Bíblia..."
+            className="w-full rounded-[28px] border border-white/70 bg-white py-3 pl-12 pr-4 text-sm text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-brand-200 focus:outline-none focus:ring-2 focus:ring-brand-100"
+          />
+          <button type="submit" className="sr-only">
+            Buscar
+          </button>
+        </form>
       </div>
     </header>
   );

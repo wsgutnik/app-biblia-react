@@ -75,36 +75,14 @@ function GlobalMenu({ activeTab, setActiveTab, onQuickAction, isDrawerOpen, setD
   return (
     <>
       <div
-        className="hidden lg:block border-b border-slate-200 bg-white/70 backdrop-blur"
-        onMouseEnter={() => setIsDesktopOpen(true)}
-        onMouseLeave={() => setIsDesktopOpen(false)}
-      >
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-3">
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              className={`rounded-full px-5 py-2 text-sm font-semibold transition ${
-                isDesktopOpen ? 'bg-slate-900 text-white shadow' : 'border border-slate-200 text-slate-700'
-              }`}
-            >
-              Menu
-            </button>
-            {isDesktopOpen && renderActions()}
-          </div>
-          {isDesktopOpen && renderLinks()}
-        </div>
-      </div>
-
-      {/* Mobile Drawer */}
-      <div
-        className={`fixed inset-0 z-40 bg-slate-900/40 transition-opacity lg:hidden ${
+        className={`fixed inset-0 z-40 bg-slate-900/40 transition-opacity ${
           isDrawerOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
         }`}
         onClick={() => setDrawerOpen(false)}
         aria-hidden={!isDrawerOpen}
       />
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-80 max-w-[90%] transform bg-white shadow-2xl transition-transform lg:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-80 max-w-[90%] transform bg-white shadow-2xl transition-transform ${
           isDrawerOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         aria-hidden={!isDrawerOpen}

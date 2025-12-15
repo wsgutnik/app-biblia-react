@@ -12,37 +12,34 @@ const TABS_CONFIG = [
 
 function Tabs({ activeTab, setActiveTab }) {
   return (
-    <div className="hidden lg:block">
-      <div className="rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Navegação</p>
-            <p className="text-sm text-slate-500">Escolha um modo de estudo</p>
-          </div>
-          <span className="text-xs font-semibold uppercase text-slate-400">Desktop</span>
+    <div className="rounded-3xl border border-white/60 bg-white px-4 py-4 shadow-card">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Navegação</p>
+          <p className="text-sm text-slate-500">Escolha um modo de estudo</p>
         </div>
-        <nav
-          className="mt-4 flex flex-wrap gap-3"
-          aria-label="Seções principais"
-        >
-          {TABS_CONFIG.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`rounded-full border px-6 py-2 text-sm font-semibold transition ${
-                  isActive
-                    ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
-                    : 'border-slate-200 text-slate-700 hover:border-slate-300'
-                }`}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </nav>
       </div>
+      <nav
+        className="mt-4 flex gap-2 overflow-x-auto pb-2"
+        aria-label="Seções principais"
+      >
+        {TABS_CONFIG.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`min-w-[110px] rounded-full px-4 py-2 text-xs font-semibold transition ${
+                isActive
+                  ? 'bg-slate-900 text-white shadow'
+                  : 'border border-slate-200 text-slate-700 hover:border-slate-300'
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 }
