@@ -1,4 +1,4 @@
-import React, { useEffect, useState, Suspense, lazy, useRef, useCallback } from 'react';
+import React, { useEffect, useState, Suspense, lazy, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import Papa from 'papaparse';
 import { VERSIONS, BOOKS } from './data';
