@@ -49,18 +49,9 @@ const dispatchTabNavigation = (tab) => {
 };
 
 const BrandCluster = () => (
-  <div className="flex flex-col items-center gap-1.5 text-center">
-    <img
-      src="/logos/Bethlehem-Brasao-Novo-black.png"
-      alt="Bethlehem Ministry logo"
-      className="h-12 w-auto object-contain sm:h-14"
-    />
-    <div className="leading-tight">
-      <p className="text-[10px] uppercase tracking-[0.35em] text-slate-500">
-        Bethlehem Ministry
-      </p>
-      <p className="text-xs font-semibold text-slate-900 sm:text-sm">Assemblies of God</p>
-    </div>
+  <div className="flex flex-col items-center text-center leading-tight">
+    <p className="text-2xl font-semibold text-slate-900 sm:text-3xl">Bíblia Sagrada</p>
+    <p className="text-sm font-medium text-slate-500">- Plus Tools</p>
   </div>
 );
 
