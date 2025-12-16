@@ -5,7 +5,7 @@ import { isAuth0Configured } from '../config/auth0';
 const IconButton = ({ label, children, onClick }) => (
   <button
     type="button"
-    className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+    className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 text-slate-600 shadow-sm transition hover:border-slate-400 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-100 focus:ring-offset-2 focus:ring-offset-white"
     aria-label={label}
     onClick={onClick}
   >
@@ -13,26 +13,9 @@ const IconButton = ({ label, children, onClick }) => (
   </button>
 );
 
-const GlobeIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
-    <circle cx="12" cy="12" r="9" />
-    <path d="M3 12h18" />
-    <path d="M12 3c-2.5 3.5-2.5 14 0 18" />
-    <path d="M12 3c2.5 3.5 2.5 14 0 18" transform="scale(-1,1) translate(-24,0)" />
-  </svg>
-);
-
 const MenuIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M4 7h16M6 12h12M8 17h8" />
-  </svg>
-);
-
-const DotsIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 6h.01" />
-    <path d="M12 12h.01" />
-    <path d="M12 18h.01" />
   </svg>
 );
 
@@ -80,7 +63,9 @@ const AccountMenuBase = ({ avatar, name, onProfile, onLogout, isAuthenticated })
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="h-10 w-10 rounded-full border border-slate-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+        className="h-10 w-10 rounded-full bg-white text-slate-600 shadow-sm transition hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-100 focus:ring-offset-2 focus:ring-offset-white"
+        aria-haspopup="menu"
+        aria-expanded={open}
         aria-label={label}
       >
         <img src={avatar} alt={name} className="h-full w-full rounded-full object-cover" />
@@ -178,28 +163,16 @@ function PrimaryNav({ onSearch, onToggleMenu, onHeightChange }) {
   return (
     <header ref={headerRef} className="sticky top-0 z-40 border-b border-white/70 bg-[#f6f8fb]/95 backdrop-blur">
       <div className="mx-auto w-full px-4 py-3 sm:px-6">
-        <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-[auto,1fr,auto] sm:items-center">
-          <div className="flex items-center gap-3 justify-center sm:justify-start">
+        <div className="flex w-full items-center justify-between gap-3">
+          <div className="flex items-center gap-3 flex-shrink-0">
             <IconButton label="Abrir menu" onClick={onToggleMenu}>
               <MenuIcon />
             </IconButton>
           </div>
-          <div className="flex justify-center px-2">
+          <div className="flex flex-1 justify-center px-2 text-center">
             <BrandCluster />
           </div>
-          <div className="flex items-center gap-2 justify-center sm:justify-end">
-            <button
-              type="button"
-              className="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700"
-            >
-              Doar
-            </button>
-            <IconButton label="Alterar idioma">
-              <GlobeIcon />
-            </IconButton>
-            <IconButton label="Mais opções">
-              <DotsIcon />
-            </IconButton>
+          <div className="flex items-center justify-end gap-2 flex-shrink-0">
             <AccountMenu />
           </div>
         </div>

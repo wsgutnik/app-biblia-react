@@ -2,7 +2,6 @@ import React, { useEffect, useState, Suspense, lazy, useRef, useCallback } from 
 import { useAuth0 } from '@auth0/auth0-react';
 import Papa from 'papaparse';
 import { VERSIONS, BOOKS } from './data';
-import Tabs from './components/Tabs';
 import VerseOfTheDay from './components/VerseOfTheDay';
 import Streak from './components/Streak';
 import HeroAuthPanel from './components/HeroAuthPanel';
@@ -208,8 +207,6 @@ function AppContent({ auth }) {
         topOffset={navHeight}
       />
       <div className="mx-auto flex w-full flex-col gap-6 px-4 pb-28 pt-6 sm:px-6">
-        <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
-
         <main
           ref={readerSectionRef}
           className="rounded-[32px] border border-white/60 bg-white p-4 shadow-card sm:p-6"
