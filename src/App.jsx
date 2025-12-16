@@ -262,7 +262,7 @@ function AppContent({ auth }) {
         <section className="rounded-2xl border border-white/70 bg-white p-5 shadow-card">
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Continuar estudo</p>
-            <h1 className="text-2xl font-semibold text-slate-900">Bíblia Sagrada ADBelem</h1>
+            <h1 className="text-2xl font-semibold text-slate-900">Bíblia Sagrada</h1>
             <p className="text-sm text-slate-500">
               Plano de leitura, destaques, comentários e recursos pastorais em um painel mobile-first.
             </p>

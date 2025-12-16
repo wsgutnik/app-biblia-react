@@ -190,7 +190,7 @@ function PrimaryNav({ onSearch, onToggleMenu, onHeightChange }) {
             </IconButton>
           </div>
           <div className="flex justify-center px-2">
-            <BrandCluster />
+
           </div>
           <div className="flex items-center gap-2 justify-center sm:justify-end">
             <button
