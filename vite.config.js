@@ -5,6 +5,5 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [
     react(),
-    // A linha do tailwindcss() foi removida daqui
   ],
 });

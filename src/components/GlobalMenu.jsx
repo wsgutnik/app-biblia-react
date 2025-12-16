@@ -18,15 +18,22 @@ const QUICK_ACTIONS = [
   { id: 'reader', label: 'Ler agora', primary: true },
 ];
 
-function GlobalMenu({ activeTab, setActiveTab, onQuickAction, isDrawerOpen, setDrawerOpen }) {
+function GlobalMenu({ activeTab, setActiveTab, onQuickAction, isDrawerOpen, setDrawerOpen, topOffset = 0 }) {
+  const drawerTop = Math.max(0, topOffset || 0);
+  const handleClose = () => {
+    if (typeof setDrawerOpen === 'function') {
+      setDrawerOpen(false);
+    }
+  };
+
   const handleSelect = (id) => {
     setActiveTab(id);
-    if (setDrawerOpen) setDrawerOpen(false);
+    handleClose();
   };
 
   const handleAction = (id) => {
     if (onQuickAction) onQuickAction(id);
-    if (setDrawerOpen) setDrawerOpen(false);
+    handleClose();
   };
 
   const renderLinks = () => (
@@ -45,7 +52,9 @@ function GlobalMenu({ activeTab, setActiveTab, onQuickAction, isDrawerOpen, setD
             }`}
           >
             <p className="text-sm font-semibold">{item.label}</p>
-            <p className={`text-xs ${isActive ? 'text-slate-200' : 'text-slate-500'}`}>{item.description}</p>
+            <p className={`hidden text-xs md:block ${isActive ? 'text-slate-200' : 'text-slate-500'}`}>
+              {item.description}
+            </p>
           </button>
         );
       })}
@@ -74,16 +83,18 @@ function GlobalMenu({ activeTab, setActiveTab, onQuickAction, isDrawerOpen, setD
   return (
     <>
       <div
-        className={`fixed inset-0 z-40 bg-slate-900/40 transition-opacity ${
+        className={`fixed left-0 right-0 bottom-0 z-40 bg-slate-900/40 transition-opacity ${
           isDrawerOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
         }`}
-        onClick={() => setDrawerOpen(false)}
+        style={{ top: drawerTop }}
+        onClick={handleClose}
         aria-hidden={!isDrawerOpen}
       />
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-80 max-w-[90%] transform bg-white shadow-2xl transition-transform ${
+        className={`fixed left-0 z-50 w-80 max-w-[90%] transform bg-white shadow-2xl transition-transform ${
           isDrawerOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
+        style={{ top: drawerTop, bottom: 0 }}
         aria-hidden={!isDrawerOpen}
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
@@ -93,7 +104,7 @@ function GlobalMenu({ activeTab, setActiveTab, onQuickAction, isDrawerOpen, setD
           </div>
           <button
             type="button"
-            onClick={() => setDrawerOpen(false)}
+            onClick={handleClose}
             className="rounded-full border border-slate-200 p-2 text-slate-500 hover:text-slate-900"
             aria-label="Fechar menu lateral"
           >

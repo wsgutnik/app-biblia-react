@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { isAuth0Configured } from '../config/auth0';
 
@@ -49,17 +49,17 @@ const dispatchTabNavigation = (tab) => {
 };
 
 const BrandCluster = () => (
-  <div className="flex flex-col items-center gap-2 text-center">
+  <div className="flex flex-col items-center gap-1.5 text-center">
     <img
       src="/logos/Bethlehem-Brasao-Novo-black.png"
       alt="Bethlehem Ministry logo"
-      className="h-16 w-auto object-contain sm:h-20"
+      className="h-12 w-auto object-contain sm:h-14"
     />
     <div className="leading-tight">
-      <p className="text-[11px] uppercase tracking-[0.4em] text-slate-500">
+      <p className="text-[10px] uppercase tracking-[0.35em] text-slate-500">
         Bethlehem Ministry
       </p>
-      <p className="text-sm font-semibold text-slate-900">Assemblies of God</p>
+      <p className="text-xs font-semibold text-slate-900 sm:text-sm">Assemblies of God</p>
     </div>
   </div>
 );
@@ -155,8 +155,21 @@ const AccountMenuAuth = () => {
 
 const AccountMenu = () => (isAuth0Configured ? <AccountMenuAuth /> : <AccountMenuFallback />);
 
-function PrimaryNav({ onSearch, onToggleMenu }) {
+function PrimaryNav({ onSearch, onToggleMenu, onHeightChange }) {
   const [term, setTerm] = useState('');
+  const headerRef = useRef(null);
+
+  useLayoutEffect(() => {
+    if (typeof onHeightChange !== 'function') return undefined;
+    const calculateHeight = () => {
+      if (headerRef.current) {
+        onHeightChange(headerRef.current.offsetHeight);
+      }
+    };
+    calculateHeight();
+    window.addEventListener('resize', calculateHeight);
+    return () => window.removeEventListener('resize', calculateHeight);
+  }, [onHeightChange]);
 
   const handleSearchSubmit = (event) => {
     event.preventDefault();
@@ -168,13 +181,18 @@ function PrimaryNav({ onSearch, onToggleMenu }) {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/70 bg-[#f6f8fb]/95 backdrop-blur">
+    <header ref={headerRef} className="sticky top-0 z-40 border-b border-white/70 bg-[#f6f8fb]/95 backdrop-blur">
       <div className="mx-auto w-full px-4 py-3 sm:px-6">
-        <div className="flex w-full flex-wrap items-center justify-between gap-3">
-          <IconButton label="Abrir menu" onClick={onToggleMenu}>
-            <MenuIcon />
-          </IconButton>
-          <div className="flex items-center gap-2">
+        <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-[auto,1fr,auto] sm:items-center">
+          <div className="flex items-center gap-3 justify-center sm:justify-start">
+            <IconButton label="Abrir menu" onClick={onToggleMenu}>
+              <MenuIcon />
+            </IconButton>
+          </div>
+          <div className="flex justify-center px-2">
+            <BrandCluster />
+          </div>
+          <div className="flex items-center gap-2 justify-center sm:justify-end">
             <button
               type="button"
               className="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700"

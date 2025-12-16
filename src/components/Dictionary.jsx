@@ -1,7 +1,9 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { translateText } from '../utils/translate';
 import { recordSearchTerm } from '../utils/trackingService';
+import { BOOKS, VERSIONS } from '../data';
 
+const DICTIONARY_LOOKUP_STORAGE_KEY = 'lastDictionaryLookup';
 const PT_TO_EN_MAP = {
   amor: 'love',
   fé: 'faith',
@@ -126,41 +128,56 @@ const EntryDetailView = ({ entry, bibleData, onBack }) => {
   );
 };
 
-// --- Componente Principal do Dicionário (com paginação e busca inteligente) ---
+// --- Componente Principal do Dicionário (com paginação, busca e análise lexical) ---
 function Dictionary({ greekDict, hebrewDict, bibleData }) {
   const [term, setTerm] = useState('');
   const [searchIn, setSearchIn] = useState('greek');
   const [results, setResults] = useState([]);
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [lexiconData, setLexiconData] = useState(null);
+  const [lexiconError, setLexiconError] = useState('');
+  const [lexiconLoading, setLexiconLoading] = useState(false);
   const ITEMS_PER_PAGE = 100;
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.__DICT_SAMPLE = {
-      greekSample: greekDict ? Object.keys(greekDict).slice(0, 10) : null,
-      hebrewSample: hebrewDict ? Object.keys(hebrewDict).slice(0, 10) : null
-    };
-    console.log('DEBUG Dictionary props:', { greekDict, hebrewDict, bibleData });
-  }, [greekDict, hebrewDict, bibleData]);
-
-  const processedDictionary = useMemo(() => {
-    const dict = searchIn === 'greek' ? greekDict : hebrewDict;
-    if (!dict) return [];
-    return Object.entries(dict).map(([strong_number, entryData]) => ({
+  const greekEntries = useMemo(() => {
+    if (!greekDict) return [];
+    return Object.entries(greekDict).map(([strong_number, entryData]) => ({
       ...entryData,
       strong_number,
       translit: entryData.translit || entryData.xlit || ''
     }));
-  }, [searchIn, greekDict, hebrewDict]);
+  }, [greekDict]);
+
+  const hebrewEntries = useMemo(() => {
+    if (!hebrewDict) return [];
+    return Object.entries(hebrewDict).map(([strong_number, entryData]) => ({
+      ...entryData,
+      strong_number,
+      translit: entryData.translit || entryData.xlit || ''
+    }));
+  }, [hebrewDict]);
+
+  const processedDictionary = useMemo(
+    () => (searchIn === 'greek' ? greekEntries : hebrewEntries),
+    [searchIn, greekEntries, hebrewEntries]
+  );
+
+  const versionLabelMap = useMemo(() => {
+    return VERSIONS.reduce((acc, version) => {
+      if (version?.id) acc[version.id] = version.name || version.id;
+      return acc;
+    }, {});
+  }, []);
 
   const updateResults = useCallback(
-    (searchTerm = '') => {
-      let filteredEntries = processedDictionary;
+    (searchTerm = '', sourceEntries) => {
+      const dictionarySource = sourceEntries || processedDictionary;
+      let filteredEntries = dictionarySource;
       if (searchTerm) {
         const lowerCaseTerm = searchTerm.toLowerCase();
         const englishTerm = PT_TO_EN_MAP[lowerCaseTerm];
-        filteredEntries = processedDictionary.filter((entry) => {
+        filteredEntries = dictionarySource.filter((entry) => {
           const def = entry.strongs_def?.toLowerCase() || '';
           const definitionMatch = englishTerm
             ? def.includes(englishTerm) || def.includes(lowerCaseTerm)
@@ -178,10 +195,178 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
     },
     [processedDictionary]
   );
-  
+
+  useEffect(() => {
+    updateResults();
+  }, [updateResults]);
+
+  const getVerseFromData = useCallback((collection, payload) => {
+    if (!Array.isArray(collection)) return null;
+    return collection.find(
+      (entry) =>
+        entry.book_abbrev === payload.bookAbbrev &&
+        Number(entry.chapter) === Number(payload.chapter) &&
+        Number(entry.verse) === Number(payload.verse)
+    );
+  }, []);
+
+  const parseStrongText = (text = '') => {
+    const regex = /([^{}]*?)\{([HG][0-9a-zA-Z]+)\}/g;
+    const tokens = [];
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      const phrase = match[1]?.trim();
+      const strongId = match[2]?.toUpperCase();
+      if (strongId) {
+        tokens.push({ word: phrase || `[${strongId}]`, strong: strongId });
+      }
+    }
+    return tokens;
+  };
+
+  const buildLexicon = useCallback(
+    (payload) => {
+      if (!payload?.bookAbbrev || !payload?.chapter || !payload?.verse) {
+        throw new Error('Referência incompleta para análise lexical.');
+      }
+      if (!bibleData?.kjv_strongs) {
+        throw new Error('Versão KJV com Strong ainda não foi carregada.');
+      }
+      const bookInfo = BOOKS.find((bookItem) => bookItem.abbrev === payload.bookAbbrev);
+      if (!bookInfo) {
+        throw new Error('Livro bíblico não reconhecido.');
+      }
+      const testament = payload.testament || (bookInfo.num <= 39 ? 'ot' : 'nt');
+      if (testament === 'ot' && !hebrewDict) {
+        throw new Error('Dicionário hebraico não está disponível.');
+      }
+      if (testament === 'nt' && !greekDict) {
+        throw new Error('Dicionário grego não está disponível.');
+      }
+
+      const kjvVerse = getVerseFromData(bibleData.kjv_strongs, payload);
+      if (!kjvVerse) {
+        throw new Error('Não foi possível localizar o versículo na KJV com Strong.');
+      }
+      const versionId = payload.versionId && bibleData?.[payload.versionId] ? payload.versionId : 'kjv';
+      const targetVerse = getVerseFromData(bibleData[versionId] || [], payload);
+
+      const tokens = parseStrongText(kjvVerse.text);
+      if (!tokens.length) {
+        throw new Error('O versículo selecionado não possui marcações de Strong disponíveis.');
+      }
+
+      const entries = tokens.map((token) => {
+        const dictSource = token.strong.startsWith('H') ? hebrewDict : greekDict;
+        const dictEntry = dictSource?.[token.strong] || null;
+        return {
+          word: token.word,
+          strong: token.strong,
+          lemma: dictEntry?.lemma || '',
+          translit: dictEntry?.translit || dictEntry?.xlit || '',
+          definition: dictEntry?.strongs_def || '',
+          dictionaryEntry: dictEntry
+            ? { ...dictEntry, strong_number: token.strong, translit: dictEntry.translit || dictEntry.xlit || '' }
+            : null
+        };
+      });
+
+      return {
+        meta: {
+          reference: `${bookInfo.name_pt} ${payload.chapter}:${payload.verse}`,
+          testament,
+          versionId,
+          versionName: versionLabelMap[versionId] || versionId,
+          versionText: targetVerse?.text || '',
+          kjvText: kjvVerse.text
+        },
+        entries
+      };
+    },
+    [bibleData, getVerseFromData, greekDict, hebrewDict, versionLabelMap]
+  );
+
+  const clearLexiconData = useCallback(() => {
+    setLexiconData(null);
+    setLexiconError('');
+    setLexiconLoading(false);
+  }, []);
+
+  const applyLookupPayload = useCallback(
+    (payload) => {
+      if (!payload) return;
+      if (typeof payload === 'string') {
+        clearLexiconData();
+        setTerm(payload);
+        updateResults(payload);
+        return;
+      }
+      if (payload?.term) {
+        clearLexiconData();
+        if (payload.language === 'hebrew' || payload.language === 'greek') {
+          setSearchIn(payload.language);
+        }
+        setTerm(payload.term);
+        updateResults(payload.term);
+        return;
+      }
+
+      if (payload.bookAbbrev && payload.chapter && payload.verse) {
+        setSelectedEntry(null);
+        setLexiconLoading(true);
+        setLexiconError('');
+        try {
+          const lexicon = buildLexicon(payload);
+          setLexiconData(lexicon);
+          const dictionaryType = lexicon.meta.testament === 'ot' ? 'hebrew' : 'greek';
+          setSearchIn(dictionaryType);
+          updateResults('', dictionaryType === 'hebrew' ? hebrewEntries : greekEntries);
+        } catch (err) {
+          setLexiconError(err.message || 'Falha ao montar análise lexical.');
+          setLexiconData(null);
+        } finally {
+          setLexiconLoading(false);
+        }
+      }
+    },
+    [buildLexicon, clearLexiconData, updateResults, hebrewEntries, greekEntries]
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const handleLookup = (event) => {
+      const detail = event.detail;
+      if (detail) {
+        applyLookupPayload(detail);
+        try {
+          const payloadToStore =
+            typeof detail === 'string' ? detail : JSON.stringify(detail);
+          window.localStorage.setItem(DICTIONARY_LOOKUP_STORAGE_KEY, payloadToStore);
+        } catch {
+          // ignore
+        }
+      }
+    };
+    window.addEventListener('dictionary:lookup', handleLookup);
+    const stored = window.localStorage.getItem(DICTIONARY_LOOKUP_STORAGE_KEY);
+    if (stored) {
+      let payload = stored;
+      if (stored.trim().startsWith('{')) {
+        try {
+          payload = JSON.parse(stored);
+        } catch {
+          payload = stored;
+        }
+      }
+      applyLookupPayload(payload);
+    }
+    return () => window.removeEventListener('dictionary:lookup', handleLookup);
+  }, [applyLookupPayload]);
+
   const handleSearch = (e) => {
     e.preventDefault();
     const trimmed = term.trim();
+    clearLexiconData();
     updateResults(trimmed);
     if (trimmed) {
       recordSearchTerm(searchIn, trimmed);
@@ -196,19 +381,7 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     return results.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [currentPage, results]);
-  // Se os dicionários ainda não foram carregados, mostramos um indicador amigável
-  if (!greekDict && !hebrewDict) {
-    return (
-      <div className="p-6 text-center">
-        <div className="flex flex-col items-center">
-          <div className="animate-spin border-4 border-blue-300 border-t-blue-600 rounded-full h-10 w-10 mb-4" />
-          <p className="text-slate-600">Carregando dicionários…</p>
-        </div>
-      </div>
-    );
-  }
 
-<<<<<<< Updated upstream
   const totalPages = Math.max(1, Math.ceil(results.length / ITEMS_PER_PAGE));
   const dictionaryLabel = searchIn === 'greek' ? 'grego' : 'hebraico';
 
@@ -217,11 +390,7 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
     setSearchIn(type);
     setSelectedEntry(null);
     setTerm('');
-    updateResults('');
-  };
-
-  const handleClear = () => {
-    setTerm('');
+    clearLexiconData();
     updateResults('');
   };
 
@@ -232,6 +401,22 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
       return prev;
     });
   };
+
+  const handleLexiconStrongSelect = (entry) => {
+    if (!entry?.dictionaryEntry) return;
+    setSelectedEntry({
+      ...entry.dictionaryEntry,
+      strong_number: entry.dictionaryEntry.strong_number || entry.strong
+    });
+  };
+
+  const paginatedResults = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return results.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [currentPage, results]);
+
+  const totalPages = Math.max(1, Math.ceil(results.length / ITEMS_PER_PAGE));
+  const dictionaryLabel = searchIn === 'greek' ? 'grego' : 'hebraico';
 
   if (!greekDict && !hebrewDict) {
     return <div style={{ padding: 20 }}>Dicionários ausentes no componente Dictionary. Ver Console.</div>;
@@ -247,6 +432,73 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
         />
       ) : (
         <>
+          {lexiconData && (
+            <div className="rounded-2xl border border-brand-100 bg-white p-5 shadow-inner space-y-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.35em] text-brand-500">Análise lexical</p>
+                  <h3 className="text-xl font-semibold text-slate-900">{lexiconData.meta.reference}</h3>
+                  <p className="text-sm text-slate-500">
+                    {lexiconData.meta.versionName}: {lexiconData.meta.versionText || 'Não disponível'}
+                  </p>
+                  <p className="text-xs text-slate-400 italic">
+                    KJV+Strongs: {lexiconData.meta.kjvText}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:border-slate-400"
+                  onClick={clearLexiconData}
+                >
+                  Limpar análise
+                </button>
+              </div>
+              {lexiconLoading ? (
+                <div className="py-6 text-center text-slate-500">Carregando análise lexical...</div>
+              ) : lexiconError ? (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {lexiconError}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-left text-sm">
+                    <thead>
+                      <tr className="text-xs uppercase tracking-wide text-slate-500">
+                        <th className="py-2 pr-4">Segmento (KJV)</th>
+                        <th className="py-2 pr-4">Strong</th>
+                        <th className="py-2 pr-4">Lema / Transliteração</th>
+                        <th className="py-2">Definição</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lexiconData.entries.map((entry, index) => (
+                        <tr key={`${entry.strong}-${index}`} className="border-t border-slate-100">
+                          <td className="py-2 pr-4 font-semibold text-slate-800">{entry.word}</td>
+                          <td className="py-2 pr-4">
+                            <button
+                              type="button"
+                              onClick={() => handleLexiconStrongSelect(entry)}
+                              className="rounded-full border border-brand-200 px-3 py-1 text-xs font-mono text-brand-700 hover:border-brand-400"
+                            >
+                              {entry.strong}
+                            </button>
+                          </td>
+                          <td className="py-2 pr-4">
+                            <div className="font-semibold text-slate-800">{entry.lemma || '—'}</div>
+                            {entry.translit && (
+                              <div className="text-xs text-slate-500">{entry.translit}</div>
+                            )}
+                          </td>
+                          <td className="py-2 text-slate-600">{entry.definition || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
             <div className="flex gap-2">
               <button
@@ -380,7 +632,6 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
   );
 }
 
-// Ensure the main component is exported as default
 export default Dictionary;
 =======
   // Se o usuário selecionou uma língua específica e esse dicionário ainda não carregou

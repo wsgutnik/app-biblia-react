@@ -1,4 +1,5 @@
-import React, { useEffect, useState, Suspense, lazy, useRef } from 'react';
+import React, { useEffect, useState, Suspense, lazy, useRef, useCallback } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
 import Papa from 'papaparse';
 import { VERSIONS, BOOKS } from './data';
 import Tabs from './components/Tabs';
@@ -7,6 +8,7 @@ import Streak from './components/Streak';
 import HeroAuthPanel from './components/HeroAuthPanel';
 import { loadStrongs } from './utils/loadStrongsdict';
 import { isAuth0Configured } from './config/auth0.js';
+import { fetchLastReading } from './utils/profileService';
 import PrimaryNav from './components/PrimaryNav';
 import MobileNav from './components/MobileNav';
 import ReadingPlansPanel from './components/ReadingPlansPanel';
@@ -22,7 +24,7 @@ const History = lazy(() => import('./components/History'));
 const Profile = lazy(() => import('./components/Profile'));
 const Quiz = lazy(() => import('./components/Quiz'));
 
-function App() {
+function AppContent({ auth }) {
   const [isLoading, setIsLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('Carregando Bíblias...');
   const [error, setError] = useState(null);
@@ -36,6 +38,10 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isReaderExpanded, setIsReaderExpanded] = useState(false);
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
+  const [navHeight, setNavHeight] = useState(0);
+  const isAuthenticated = auth?.isAuthenticated ?? false;
+  const user = auth?.user ?? null;
+  const lastReadingUserRef = useRef(null);
 
   useEffect(() => {
     const loadAllData = async () => {
@@ -101,6 +107,33 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (!isAuth0Configured) return;
+    if (!isAuthenticated || !user?.sub) {
+      lastReadingUserRef.current = null;
+      return;
+    }
+    if (lastReadingUserRef.current === user.sub) return;
+    lastReadingUserRef.current = user.sub;
+    let isMounted = true;
+    const loadLastReading = async () => {
+      try {
+        const data = await fetchLastReading(user.sub);
+        if (!isMounted || !data?.bookAbbrev || !data?.chapter) return;
+        setInitialChapter({
+          bookAbbrev: data.bookAbbrev,
+          chapter: data.chapter
+        });
+      } catch (err) {
+        console.error('Falha ao carregar última leitura:', err);
+      }
+    };
+    loadLastReading();
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, user?.sub]);
+
+  useEffect(() => {
     if (activeTab !== 'reader' && isReaderExpanded) {
       setIsReaderExpanded(false);
     }
@@ -164,6 +197,7 @@ function App() {
       <PrimaryNav
         onSearch={handleGlobalSearch}
         onToggleMenu={() => setIsMenuDrawerOpen((prev) => !prev)}
+        onHeightChange={setNavHeight}
       />
       <GlobalMenu
         activeTab={activeTab}
@@ -171,41 +205,9 @@ function App() {
         onQuickAction={handleQuickAction}
         isDrawerOpen={isMenuDrawerOpen}
         setDrawerOpen={setIsMenuDrawerOpen}
+        topOffset={navHeight}
       />
       <div className="mx-auto flex w-full flex-col gap-6 px-4 pb-28 pt-6 sm:px-6">
-        <section className="rounded-2xl border border-white/70 bg-white p-5 shadow-card">
-          <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Continuar estudo</p>
-            <h1 className="text-2xl font-semibold text-slate-900">Bíblia Sagrada ADBelem</h1>
-            <p className="text-sm text-slate-500">
-              Plano de leitura, destaques, comentários e recursos pastorais em um painel mobile-first.
-            </p>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickAction('reader')}
-              className="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700"
-            >
-              Ler agora
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickAction('dictionary')}
-              className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300"
-            >
-              Dicionário Strong
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickAction('history')}
-              className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300"
-            >
-              Histórico rápido
-            </button>
-          </div>
-        </section>
-
         <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
 
         <main
@@ -257,6 +259,39 @@ function App() {
           </Suspense>
         </main>
 
+        <section className="rounded-2xl border border-white/70 bg-white p-5 shadow-card">
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Continuar estudo</p>
+            <h1 className="text-2xl font-semibold text-slate-900">Bíblia Sagrada ADBelem</h1>
+            <p className="text-sm text-slate-500">
+              Plano de leitura, destaques, comentários e recursos pastorais em um painel mobile-first.
+            </p>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => handleQuickAction('reader')}
+              className="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700"
+            >
+              Ler agora
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickAction('dictionary')}
+              className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300"
+            >
+              Dicionário Strong
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickAction('history')}
+              className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300"
+            >
+              Histórico rápido
+            </button>
+          </div>
+        </section>
+
         {!isReaderExpanded && (
           <>
             {isAuth0Configured && (
@@ -288,4 +323,14 @@ function App() {
   );
 }
 
-export default App;
+function AppWithAuth(props) {
+  const auth = useAuth0();
+  return <AppContent {...props} auth={auth} />;
+}
+
+export default function App(props) {
+  if (!isAuth0Configured) {
+    return <AppContent {...props} auth={null} />;
+  }
+  return <AppWithAuth {...props} />;
+}

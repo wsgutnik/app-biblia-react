@@ -4,6 +4,8 @@ import { BOOKS, VERSIONS } from '../data';
 import { recordStreak } from '../utils/streakService';
 import { appendReadingHistory } from '../utils/activitiesService';
 import { isAuth0Configured } from '../config/auth0';
+import { saveLastReading } from '../utils/profileService';
+import { API_PREFIX, authorizedJsonFetch } from '../utils/apiClient';
 
 // --- Sub-componente para o Pop-up de Partilha ---
 const SharePopup = ({ text, position, onShare }) => {
@@ -32,6 +34,7 @@ const SharePopup = ({ text, position, onShare }) => {
 
 
 const HIGHLIGHTS_STORAGE_KEY = 'verseHighlights';
+const DICTIONARY_LOOKUP_STORAGE_KEY = 'lastDictionaryLookup';
 const buildVerseKey = (bookAbbrev, chapterNumber, verseNumber) =>
   `${bookAbbrev}-${chapterNumber}-${verseNumber}`;
 
@@ -77,6 +80,7 @@ function ReaderContent({
   const readerRef = useRef(null); // Ref para a área de leitura
   const lastStreakUpdateRef = useRef(null);
   const lastHistoryEntryRef = useRef(null);
+  const lastSavedReadingRef = useRef(null);
   const { isAuthenticated, user } = auth ?? { isAuthenticated: false, user: null };
   const [highlightedVerses, setHighlightedVerses] = useState(() => {
     if (typeof window === 'undefined') return {};
@@ -88,6 +92,7 @@ function ReaderContent({
     }
   });
   const [activePalette, setActivePalette] = useState(null);
+  const lastSyncedHighlightsRef = useRef(null);
 
     useEffect(() => {
     if (initialChapter) {
@@ -145,9 +150,27 @@ function ReaderContent({
       }
     };
 
+    const syncLastReading = async () => {
+      if (!isAuth0Configured || !isAuthenticated || !user?.sub) return;
+      const key = `${book}-${chapter}-${version1}`;
+      if (lastSavedReadingRef.current === key) return;
+      try {
+        await saveLastReading(user.sub, {
+          bookAbbrev: book,
+          bookName: entry.bookName,
+          chapter: Number(chapter),
+          versionId: version1
+        });
+        lastSavedReadingRef.current = key;
+      } catch (err) {
+        console.error('Falha ao salvar última leitura:', err);
+      }
+    };
+
     trySyncHistory();
     tryRecordStreak();
-  }, [book, chapter, isAuthenticated, user?.sub, onStreakRecorded]);
+    syncLastReading();
+  }, [book, chapter, isAuthenticated, user?.sub, onStreakRecorded, version1]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -157,6 +180,55 @@ function ReaderContent({
       console.warn('Não foi possível guardar destaques:', err);
     }
   }, [highlightedVerses]);
+
+  useEffect(() => {
+    if (!isAuth0Configured || !isAuthenticated || !user?.sub) return;
+    let isMounted = true;
+    const loadHighlights = async () => {
+      try {
+        const result = await authorizedJsonFetch({
+          path: `${API_PREFIX}/profile/highlights`,
+          userSub: user.sub
+        });
+        if (!isMounted) return;
+        const normalized = normalizeHighlightPayload(result?.highlights || {});
+        setHighlightedVerses(normalized);
+        lastSyncedHighlightsRef.current = JSON.stringify(normalized);
+      } catch (err) {
+        console.error('Falha ao carregar destaques remotos:', err);
+      }
+    };
+    loadHighlights();
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, user?.sub]);
+
+  useEffect(() => {
+    if (!isAuth0Configured || !isAuthenticated || !user?.sub) return;
+    const serialized = JSON.stringify(highlightedVerses);
+    if (lastSyncedHighlightsRef.current === serialized) return;
+    let cancelled = false;
+    const syncHighlights = async () => {
+      try {
+        await authorizedJsonFetch({
+          path: `${API_PREFIX}/profile/highlights`,
+          method: 'PUT',
+          userSub: user.sub,
+          body: JSON.stringify({ highlights: highlightedVerses })
+        });
+        if (!cancelled) {
+          lastSyncedHighlightsRef.current = serialized;
+        }
+      } catch (err) {
+        console.error('Falha ao sincronizar destaques:', err);
+      }
+    };
+    syncHighlights();
+    return () => {
+      cancelled = true;
+    };
+  }, [highlightedVerses, isAuthenticated, user?.sub]);
 
   const selectedBookInfo = useMemo(() => BOOKS.find((b) => b.abbrev === book), [book]);
   
@@ -223,106 +295,151 @@ function ReaderContent({
     setChapter('1');
   };
 
+  const handleVerseShare = async (verseNumber, verseText = '') => {
+    const reference = `${selectedBookInfo?.name_pt || ''} ${chapter}:${verseNumber}`;
+    const message = `${reference} — ${verseText.trim()}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: reference, text: message });
+      } else {
+        await navigator.clipboard.writeText(message);
+        alert('Versículo copiado para partilha!');
+      }
+    } catch (err) {
+      console.error('Falha ao partilhar versículo:', err);
+    }
+  };
+
+  const isOldTestament = (selectedBookInfo?.num || 0) <= 39;
+
+  const handleVerseLookup = (verseData) => {
+    if (!verseData || typeof window === 'undefined') return;
+    const payload = {
+      bookAbbrev: book,
+      bookName: selectedBookInfo?.name_pt || '',
+      chapter: Number(chapter),
+      verse: Number(verseData.verse),
+      verseText: verseData.text,
+      versionId: version1,
+      testament: isOldTestament ? 'ot' : 'nt',
+      timestamp: Date.now()
+    };
+    try {
+      window.localStorage.setItem(DICTIONARY_LOOKUP_STORAGE_KEY, JSON.stringify(payload));
+    } catch {
+      // ignore storage failures
+    }
+    window.dispatchEvent(new CustomEvent('dictionary:lookup', { detail: payload }));
+    window.dispatchEvent(new CustomEvent('app:navigate', { detail: { tab: 'dictionary' } }));
+  };
+
   const renderVerseColumn = (content, accentTone = 'brand') => {
-    const badgeClass =
-      accentTone === 'emerald'
-        ? 'bg-emerald-50 text-emerald-600'
-        : 'bg-brand-50 text-brand-600';
+    const paletteBorder =
+      accentTone === 'emerald' ? 'border-emerald-200' : 'border-brand-200';
+
+    const togglePalette = (verseKey) => {
+      setActivePalette((prev) => (prev === verseKey ? null : verseKey));
+    };
+
     return (
-      <div className="space-y-3">
-        {content.map((v) => {
-          const verseKey = buildVerseKey(book, chapter, v.verse);
-          const highlightId = highlightedVerses[verseKey];
-          const highlightOption = HIGHLIGHT_OPTIONS.find((opt) => opt.id === highlightId);
-          const isUnderline = highlightOption?.variant === 'underline';
-          const verseStyle =
-            highlightOption && !isUnderline
-              ? {
-                  background: highlightOption.background,
-                  borderColor: highlightOption.accent,
-                  boxShadow: 'inset 0 0 0 1px rgba(15,23,42,0.03)'
-                }
-              : {};
-          const isPaletteOpen = activePalette === verseKey;
-          return (
-            <div
-              key={v.verse}
-              className="rounded-[28px] border border-transparent bg-white/70 px-4 py-3 shadow-sm transition hover:border-slate-100"
-              style={verseStyle}
-            >
-              <div className="flex items-start gap-3">
-                <span
-                  className={`mt-1 inline-flex h-7 min-w-[32px] items-center justify-center rounded-full text-xs font-bold ${badgeClass}`}
+      <div className="rounded-[32px] border border-white/60 bg-white/80 p-6 shadow-sm">
+        <p className="text-base leading-relaxed text-slate-800">
+          {content.map((v, index) => {
+            const verseKey = buildVerseKey(book, chapter, v.verse);
+            const highlightId = highlightedVerses[verseKey];
+            const highlightOption = HIGHLIGHT_OPTIONS.find((opt) => opt.id === highlightId);
+            const isUnderline = highlightOption?.variant === 'underline';
+            const verseStyle =
+              highlightOption && !isUnderline
+                ? {
+                    background: highlightOption.background,
+                    boxShadow: `inset 0 -0.15em 0 ${highlightOption.accent}30`
+                  }
+                : {};
+            const isPaletteOpen = activePalette === verseKey;
+
+            return (
+              <span key={v.verse} className="relative inline-block align-baseline">
+                <button
+                  type="button"
+                  onClick={() => togglePalette(verseKey)}
+                  className={`inline text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-200 ${
+                    isUnderline ? 'border-b border-dashed pb-[2px]' : 'rounded-2xl px-1'
+                  }`}
+                  style={verseStyle}
+                  aria-label={`Abrir opções para o versículo ${v.verse}`}
                 >
-                  {v.verse}
-                </span>
-                <div className="flex-1 space-y-2">
-                  <p
-                    className={`text-base leading-relaxed text-slate-800 ${
-                      isUnderline ? 'border-b border-dashed pb-1' : ''
-                    }`}
-                    style={
-                      isUnderline
-                        ? { borderColor: highlightOption?.accent || '#94a3b8' }
-                        : undefined
-                    }
+                  <span className="font-semibold text-slate-900">{v.verse}.</span>{' '}
+                  {v.text.trim()}
+                </button>
+                {isPaletteOpen && (
+                  <div
+                    className={`absolute left-0 top-[calc(100%+0.35rem)] z-30 w-60 rounded-2xl border bg-white p-3 shadow-2xl ${paletteBorder}`}
                   >
-                    {v.text}
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-xs font-semibold uppercase text-slate-400">Destaques</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {HIGHLIGHT_OPTIONS.map((option) => (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => applyHighlight(v.verse, option.id)}
+                          className="flex h-9 w-9 items-center justify-center rounded-full border-2 bg-white shadow-inner"
+                          style={{
+                            borderColor: option.accent,
+                            background:
+                              option.variant === 'underline' ? '#f8fafc' : option.background
+                          }}
+                          aria-label={`Aplicar ${option.label}`}
+                        >
+                          {option.variant === 'underline' ? (
+                            <span
+                              className="block h-[2px] w-4 rounded-full"
+                              style={{ background: option.accent }}
+                            />
+                          ) : null}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => applyHighlight(v.verse, null)}
+                        className="text-[11px] font-semibold uppercase tracking-wide text-slate-400"
+                      >
+                        Limpar
+                      </button>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleVerseShare(v.verse, v.text)}
+                        className="flex-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
+                      >
+                        Compartilhar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setViewMode('compare');
+                          setActivePalette(null);
+                        }}
+                        className="flex-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
+                      >
+                        Comparar
+                      </button>
+                    </div>
                     <button
                       type="button"
-                      onClick={() =>
-                        setActivePalette(isPaletteOpen ? null : verseKey)
-                      }
-                      className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                        highlightId
-                          ? 'border-slate-900 text-slate-900'
-                          : 'border-slate-200 text-slate-500 hover:border-slate-400'
-                      }`}
+                      onClick={() => handleVerseLookup(v)}
+                      className="mt-2 w-full rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white"
                     >
-                      {highlightId ? 'Editar destaque' : 'Destacar'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => applyHighlight(v.verse, null)}
-                      className="text-[11px] font-semibold uppercase tracking-wide text-slate-400"
-                    >
-                      Limpar
+                      {isOldTestament ? 'Pesquisar no hebraico' : 'Pesquisar no grego'}
                     </button>
                   </div>
-                </div>
-              </div>
-              {isPaletteOpen && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {HIGHLIGHT_OPTIONS.map((option) => (
-                    <button
-                      key={option.id}
-                      type="button"
-                      onClick={() => applyHighlight(v.verse, option.id)}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border-2 bg-white shadow-inner"
-                      style={{
-                        borderColor: option.accent,
-                        background:
-                          option.variant === 'underline'
-                            ? '#f8fafc'
-                            : option.background
-                      }}
-                      aria-label={`Aplicar ${option.label}`}
-                    >
-                      {option.variant === 'underline' ? (
-                        <span
-                          className="block h-[2px] w-4 rounded-full"
-                          style={{ background: option.accent }}
-                        />
-                      ) : null}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
+                )}
+                {index < content.length - 1 && <span> </span>}
+              </span>
+            );
+          })}
+        </p>
       </div>
     );
   };
