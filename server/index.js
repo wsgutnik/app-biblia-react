@@ -7,7 +7,11 @@ const {
   pool,
   seedDatabase,
   getProfile,
+  getProfileHighlights,
+  getProfileLastReading,
   upsertProfile,
+  saveProfileHighlights,
+  saveProfileLastReading,
   getQuizStats,
   upsertQuizStats,
   getReadingHistory,
@@ -38,19 +42,33 @@ const requireUser = (req, res, next) => {
   next();
 };
 
+const formatLastReading = (row) =>
+  row?.last_book_abbrev && row?.last_chapter
+    ? {
+        bookAbbrev: row.last_book_abbrev,
+        bookName: row.last_book_name || '',
+        chapter: row.last_chapter,
+        versionId: row.last_version_id || null
+      }
+    : null;
+
 const mapProfileRow = (row, fallbackName = '') =>
   row
     ? {
         fullName: row.full_name || fallbackName || '',
         congregation: row.congregation || '',
         birthDate: row.birth_date || null,
-        maritalStatus: row.marital_status || ''
+        maritalStatus: row.marital_status || '',
+        highlights: row.highlights || {},
+        lastReading: formatLastReading(row)
       }
     : {
         fullName: fallbackName || '',
         congregation: '',
         birthDate: null,
-        maritalStatus: ''
+        maritalStatus: '',
+        highlights: {},
+        lastReading: null
       };
 
 const secureRouter = express.Router();
@@ -73,6 +91,48 @@ secureRouter.put('/profile', async (req, res) => {
   } catch (err) {
     console.error('Failed to save profile:', err.message);
     res.status(500).json({ error: 'Erro ao salvar dados do perfil' });
+  }
+});
+
+secureRouter.get('/profile/highlights', async (req, res) => {
+  try {
+    const highlights = await getProfileHighlights(req.auth0Sub);
+    res.json({ highlights: highlights || {} });
+  } catch (err) {
+    console.error('Failed to load highlights:', err.message);
+    res.status(500).json({ error: 'Erro ao carregar destaques' });
+  }
+});
+
+secureRouter.put('/profile/highlights', async (req, res) => {
+  try {
+    const payload = req.body?.highlights ?? req.body ?? {};
+    const highlights = await saveProfileHighlights(req.auth0Sub, payload);
+    res.json({ highlights });
+  } catch (err) {
+    console.error('Failed to save highlights:', err.message);
+    res.status(500).json({ error: 'Erro ao salvar destaques' });
+  }
+});
+
+secureRouter.get('/profile/last-reading', async (req, res) => {
+  try {
+    const lastReading = await getProfileLastReading(req.auth0Sub);
+    res.json({ lastReading: lastReading || null });
+  } catch (err) {
+    console.error('Failed to load last reading:', err.message);
+    res.status(500).json({ error: 'Erro ao carregar última leitura' });
+  }
+});
+
+secureRouter.put('/profile/last-reading', async (req, res) => {
+  try {
+    const payload = req.body?.lastReading ?? req.body ?? {};
+    const lastReading = await saveProfileLastReading(req.auth0Sub, payload);
+    res.json({ lastReading });
+  } catch (err) {
+    console.error('Failed to save last reading:', err.message);
+    res.status(500).json({ error: 'Erro ao salvar última leitura' });
   }
 });
 

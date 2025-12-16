@@ -73,9 +73,22 @@ async function ensureSchema() {
       congregation TEXT,
       birth_date DATE,
       marital_status TEXT,
+      highlights JSONB DEFAULT '{}'::jsonb,
+      last_book_abbrev TEXT,
+      last_book_name TEXT,
+      last_chapter INTEGER,
+      last_version_id TEXT,
       created_at TIMESTAMPTZ DEFAULT now(),
       updated_at TIMESTAMPTZ DEFAULT now()
     );
+  `);
+  await pool.query(`
+    ALTER TABLE profiles
+    ADD COLUMN IF NOT EXISTS highlights JSONB DEFAULT '{}'::jsonb,
+    ADD COLUMN IF NOT EXISTS last_book_abbrev TEXT,
+    ADD COLUMN IF NOT EXISTS last_book_name TEXT,
+    ADD COLUMN IF NOT EXISTS last_chapter INTEGER,
+    ADD COLUMN IF NOT EXISTS last_version_id TEXT;
   `);
 
   await pool.query(`
@@ -276,6 +289,25 @@ const sanitizeDate = (value) => {
   return date.toISOString().slice(0, 10);
 };
 
+const sanitizeHighlightMap = (value) => {
+  if (!value || typeof value !== 'object') return {};
+  const normalized = {};
+  Object.entries(value).forEach(([key, color]) => {
+    if (!key || typeof color !== 'string') return;
+    const normalizedKey = key.toString().trim();
+    const normalizedColor = color.trim();
+    if (!normalizedKey || !normalizedColor) return;
+    normalized[normalizedKey.slice(0, 120)] = normalizedColor.slice(0, 32);
+  });
+  return normalized;
+};
+
+const sanitizeChapterNumber = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 1) return null;
+  return Math.floor(parsed);
+};
+
 const normalizeLanguage = (value) => {
   if (!value) return null;
   const normalized = value.toString().trim().toLowerCase();
@@ -293,7 +325,8 @@ const normalizeSearchTerm = (value) => {
 async function getProfile(auth0Sub) {
   const { rows } = await pool.query(
     `
-      SELECT auth0_sub, full_name, congregation, birth_date, marital_status
+      SELECT auth0_sub, full_name, congregation, birth_date, marital_status, highlights,
+             last_book_abbrev, last_book_name, last_chapter, last_version_id
       FROM profiles
       WHERE auth0_sub = $1
     `,
@@ -318,12 +351,97 @@ async function upsertProfile(auth0Sub, data) {
         birth_date = EXCLUDED.birth_date,
         marital_status = EXCLUDED.marital_status,
         updated_at = now()
-      RETURNING auth0_sub, full_name, congregation, birth_date, marital_status
+      RETURNING auth0_sub, full_name, congregation, birth_date, marital_status, highlights,
+                last_book_abbrev, last_book_name, last_chapter, last_version_id
     `,
     [auth0Sub, fullName, congregation, birthDate, maritalStatus]
   );
 
   return rows[0];
+}
+
+async function getProfileHighlights(auth0Sub) {
+  const { rows } = await pool.query(
+    `
+      SELECT highlights
+      FROM profiles
+      WHERE auth0_sub = $1
+    `,
+    [auth0Sub]
+  );
+  return rows[0]?.highlights || {};
+}
+
+async function saveProfileHighlights(auth0Sub, highlights = {}) {
+  const payload = sanitizeHighlightMap(highlights);
+  const { rows } = await pool.query(
+    `
+      INSERT INTO profiles (auth0_sub, highlights, updated_at)
+      VALUES ($1, $2, now())
+      ON CONFLICT (auth0_sub) DO UPDATE SET
+        highlights = EXCLUDED.highlights,
+        updated_at = now()
+      RETURNING highlights
+    `,
+    [auth0Sub, payload]
+  );
+  return rows[0]?.highlights || {};
+}
+
+async function getProfileLastReading(auth0Sub) {
+  const { rows } = await pool.query(
+    `
+      SELECT last_book_abbrev, last_book_name, last_chapter, last_version_id
+      FROM profiles
+      WHERE auth0_sub = $1
+    `,
+    [auth0Sub]
+  );
+  const data = rows[0] || null;
+  return data
+    ? {
+        bookAbbrev: data.last_book_abbrev || null,
+        bookName: data.last_book_name || null,
+        chapter: data.last_chapter || null,
+        versionId: data.last_version_id || null
+      }
+    : null;
+}
+
+async function saveProfileLastReading(auth0Sub, payload = {}) {
+  const bookAbbrev = sanitizeText(payload.bookAbbrev || payload.book_abbrev || null);
+  const bookName = sanitizeText(payload.bookName || payload.book_name || null);
+  const chapter = sanitizeChapterNumber(payload.chapter);
+  const versionId = sanitizeText(payload.versionId || payload.version_id || null);
+
+  if (!bookAbbrev || !chapter) {
+    return getProfileLastReading(auth0Sub);
+  }
+
+  const { rows } = await pool.query(
+    `
+      INSERT INTO profiles (auth0_sub, last_book_abbrev, last_book_name, last_chapter, last_version_id, updated_at)
+      VALUES ($1, $2, $3, $4, $5, now())
+      ON CONFLICT (auth0_sub) DO UPDATE SET
+        last_book_abbrev = EXCLUDED.last_book_abbrev,
+        last_book_name = EXCLUDED.last_book_name,
+        last_chapter = EXCLUDED.last_chapter,
+        last_version_id = EXCLUDED.last_version_id,
+        updated_at = now()
+      RETURNING last_book_abbrev, last_book_name, last_chapter, last_version_id
+    `,
+    [auth0Sub, bookAbbrev, bookName, chapter, versionId]
+  );
+
+  const data = rows[0] || null;
+  return data
+    ? {
+        bookAbbrev: data.last_book_abbrev || null,
+        bookName: data.last_book_name || null,
+        chapter: data.last_chapter || null,
+        versionId: data.last_version_id || null
+      }
+    : null;
 }
 
 async function getQuizStats(auth0Sub) {
@@ -652,7 +770,11 @@ module.exports = {
   pool,
   seedDatabase,
   getProfile,
+  getProfileHighlights,
+  getProfileLastReading,
   upsertProfile,
+  saveProfileHighlights,
+  saveProfileLastReading,
   getQuizStats,
   upsertQuizStats,
   getReadingHistory,

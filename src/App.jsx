@@ -1,4 +1,5 @@
 import React, { useEffect, useState, Suspense, lazy, useRef } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
 import Papa from 'papaparse';
 import { VERSIONS, BOOKS } from './data';
 import Tabs from './components/Tabs';
@@ -7,6 +8,7 @@ import Streak from './components/Streak';
 import HeroAuthPanel from './components/HeroAuthPanel';
 import { loadStrongs } from './utils/loadStrongsdict';
 import { isAuth0Configured } from './config/auth0.js';
+import { fetchLastReading } from './utils/profileService';
 import PrimaryNav from './components/PrimaryNav';
 import MobileNav from './components/MobileNav';
 import ReadingPlansPanel from './components/ReadingPlansPanel';
@@ -37,6 +39,8 @@ function App() {
   const [isReaderExpanded, setIsReaderExpanded] = useState(false);
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const [navHeight, setNavHeight] = useState(0);
+  const { isAuthenticated, user } = useAuth0();
+  const lastReadingUserRef = useRef(null);
 
   useEffect(() => {
     const loadAllData = async () => {
@@ -100,6 +104,33 @@ function App() {
     window.addEventListener('app:navigate', handleExternalNavigation);
     return () => window.removeEventListener('app:navigate', handleExternalNavigation);
   }, []);
+
+  useEffect(() => {
+    if (!isAuth0Configured) return;
+    if (!isAuthenticated || !user?.sub) {
+      lastReadingUserRef.current = null;
+      return;
+    }
+    if (lastReadingUserRef.current === user.sub) return;
+    lastReadingUserRef.current = user.sub;
+    let isMounted = true;
+    const loadLastReading = async () => {
+      try {
+        const data = await fetchLastReading(user.sub);
+        if (!isMounted || !data?.bookAbbrev || !data?.chapter) return;
+        setInitialChapter({
+          bookAbbrev: data.bookAbbrev,
+          chapter: data.chapter
+        });
+      } catch (err) {
+        console.error('Falha ao carregar última leitura:', err);
+      }
+    };
+    loadLastReading();
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, user?.sub]);
 
   useEffect(() => {
     if (activeTab !== 'reader' && isReaderExpanded) {

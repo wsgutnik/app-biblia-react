@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { translateText } from '../utils/translate';
 import { recordSearchTerm } from '../utils/trackingService';
 
+const DICTIONARY_LOOKUP_STORAGE_KEY = 'lastDictionaryLookup';
 const PT_TO_EN_MAP = {
   amor: 'love',
   fé: 'faith',
@@ -144,23 +145,64 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
     console.log('DEBUG Dictionary props:', { greekDict, hebrewDict, bibleData });
   }, [greekDict, hebrewDict, bibleData]);
 
-  const processedDictionary = useMemo(() => {
-    const dict = searchIn === 'greek' ? greekDict : hebrewDict;
-    if (!dict) return [];
-    return Object.entries(dict).map(([strong_number, entryData]) => ({
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const applyLookup = (term) => {
+      if (!term) return;
+      setSearchIn('greek');
+      setTerm(term);
+      updateResults(term, greekEntries);
+      try {
+        window.localStorage.setItem(DICTIONARY_LOOKUP_STORAGE_KEY, term);
+      } catch {
+        // ignore
+      }
+    };
+    const handleLookup = (event) => {
+      const nextTerm = event.detail?.term?.trim();
+      if (nextTerm) {
+        applyLookup(nextTerm);
+      }
+    };
+    window.addEventListener('dictionary:lookup', handleLookup);
+    const stored = window.localStorage.getItem(DICTIONARY_LOOKUP_STORAGE_KEY);
+    if (stored) {
+      applyLookup(stored);
+    }
+    return () => window.removeEventListener('dictionary:lookup', handleLookup);
+  }, [updateResults, greekEntries]);
+
+  const greekEntries = useMemo(() => {
+    if (!greekDict) return [];
+    return Object.entries(greekDict).map(([strong_number, entryData]) => ({
       ...entryData,
       strong_number,
       translit: entryData.translit || entryData.xlit || ''
     }));
-  }, [searchIn, greekDict, hebrewDict]);
+  }, [greekDict]);
+
+  const hebrewEntries = useMemo(() => {
+    if (!hebrewDict) return [];
+    return Object.entries(hebrewDict).map(([strong_number, entryData]) => ({
+      ...entryData,
+      strong_number,
+      translit: entryData.translit || entryData.xlit || ''
+    }));
+  }, [hebrewDict]);
+
+  const processedDictionary = useMemo(
+    () => (searchIn === 'greek' ? greekEntries : hebrewEntries),
+    [searchIn, greekEntries, hebrewEntries]
+  );
 
   const updateResults = useCallback(
-    (searchTerm = '') => {
-      let filteredEntries = processedDictionary;
+    (searchTerm = '', sourceEntries) => {
+      const dictionarySource = sourceEntries || processedDictionary;
+      let filteredEntries = dictionarySource;
       if (searchTerm) {
         const lowerCaseTerm = searchTerm.toLowerCase();
         const englishTerm = PT_TO_EN_MAP[lowerCaseTerm];
-        filteredEntries = processedDictionary.filter((entry) => {
+        filteredEntries = dictionarySource.filter((entry) => {
           const def = entry.strongs_def?.toLowerCase() || '';
           const definitionMatch = englishTerm
             ? def.includes(englishTerm) || def.includes(lowerCaseTerm)
