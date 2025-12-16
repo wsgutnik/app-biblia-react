@@ -196,7 +196,19 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     return results.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [currentPage, results]);
+  // Se os dicionários ainda não foram carregados, mostramos um indicador amigável
+  if (!greekDict && !hebrewDict) {
+    return (
+      <div className="p-6 text-center">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin border-4 border-blue-300 border-t-blue-600 rounded-full h-10 w-10 mb-4" />
+          <p className="text-slate-600">Carregando dicionários…</p>
+        </div>
+      </div>
+    );
+  }
 
+<<<<<<< Updated upstream
   const totalPages = Math.max(1, Math.ceil(results.length / ITEMS_PER_PAGE));
   const dictionaryLabel = searchIn === 'greek' ? 'grego' : 'hebraico';
 
@@ -370,3 +382,26 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
 
 // Ensure the main component is exported as default
 export default Dictionary;
+=======
+  // Se o usuário selecionou uma língua específica e esse dicionário ainda não carregou
+  if (searchIn === 'greek' && !greekDict) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-slate-600">Carregando dicionário grego…</p>
+      </div>
+    );
+  }
+
+  if (searchIn === 'hebrew' && !hebrewDict) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-slate-600">Carregando dicionário hebraico…</p>
+      </div>
+    );
+  }
+
+  // Caso contrário, o dicionário está carregado (ou ao menos o selecionado) — o resto do componente renderizará normalmente abaixo
+}
+
+export default Dictionary;
+>>>>>>> Stashed changes

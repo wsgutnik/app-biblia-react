@@ -170,16 +170,11 @@ function PrimaryNav({ onSearch, onToggleMenu }) {
   return (
     <header className="sticky top-0 z-40 border-b border-white/70 bg-[#f6f8fb]/95 backdrop-blur">
       <div className="mx-auto w-full px-4 py-3 sm:px-6">
-        <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-[auto,1fr,auto] sm:items-center">
-          <div className="flex items-center gap-3 justify-center sm:justify-start">
-            <IconButton label="Abrir menu" onClick={onToggleMenu}>
-              <MenuIcon />
-            </IconButton>
-          </div>
-          <div className="flex justify-center px-2">
-            <BrandCluster />
-          </div>
-          <div className="flex items-center gap-2 justify-center sm:justify-end">
+        <div className="flex w-full flex-wrap items-center justify-between gap-3">
+          <IconButton label="Abrir menu" onClick={onToggleMenu}>
+            <MenuIcon />
+          </IconButton>
+          <div className="flex items-center gap-2">
             <button
               type="button"
               className="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700"
@@ -194,6 +189,10 @@ function PrimaryNav({ onSearch, onToggleMenu }) {
             </IconButton>
             <AccountMenu />
           </div>
+        </div>
+
+        <div className="mt-6 flex justify-center">
+          <BrandCluster />
         </div>
 
         <form onSubmit={handleSearchSubmit} className="mt-3 relative flex">
