@@ -24,7 +24,7 @@ const History = lazy(() => import('./components/History'));
 const Profile = lazy(() => import('./components/Profile'));
 const Quiz = lazy(() => import('./components/Quiz'));
 
-function App() {
+function AppContent({ auth }) {
   const [isLoading, setIsLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('Carregando Bíblias...');
   const [error, setError] = useState(null);
@@ -39,7 +39,8 @@ function App() {
   const [isReaderExpanded, setIsReaderExpanded] = useState(false);
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const [navHeight, setNavHeight] = useState(0);
-  const { isAuthenticated, user } = useAuth0();
+  const isAuthenticated = auth?.isAuthenticated ?? false;
+  const user = auth?.user ?? null;
   const lastReadingUserRef = useRef(null);
 
   useEffect(() => {
@@ -322,4 +323,14 @@ function App() {
   );
 }
 
-export default App;
+function AppWithAuth(props) {
+  const auth = useAuth0();
+  return <AppContent {...props} auth={auth} />;
+}
+
+export default function App(props) {
+  if (!isAuth0Configured) {
+    return <AppContent {...props} auth={null} />;
+  }
+  return <AppWithAuth {...props} />;
+}

@@ -310,16 +310,26 @@ function ReaderContent({
     }
   };
 
-  const handleVerseLookup = (verseText = '') => {
-    if (typeof window === 'undefined') return;
-    const normalized = verseText.replace(/\s+/g, ' ').trim();
-    if (!normalized) return;
+  const isOldTestament = (selectedBookInfo?.num || 0) <= 39;
+
+  const handleVerseLookup = (verseData) => {
+    if (!verseData || typeof window === 'undefined') return;
+    const payload = {
+      bookAbbrev: book,
+      bookName: selectedBookInfo?.name_pt || '',
+      chapter: Number(chapter),
+      verse: Number(verseData.verse),
+      verseText: verseData.text,
+      versionId: version1,
+      testament: isOldTestament ? 'ot' : 'nt',
+      timestamp: Date.now()
+    };
     try {
-      window.localStorage.setItem(DICTIONARY_LOOKUP_STORAGE_KEY, normalized);
+      window.localStorage.setItem(DICTIONARY_LOOKUP_STORAGE_KEY, JSON.stringify(payload));
     } catch {
-      // ignore
+      // ignore storage failures
     }
-    window.dispatchEvent(new CustomEvent('dictionary:lookup', { detail: { term: normalized } }));
+    window.dispatchEvent(new CustomEvent('dictionary:lookup', { detail: payload }));
     window.dispatchEvent(new CustomEvent('app:navigate', { detail: { tab: 'dictionary' } }));
   };
 
@@ -418,10 +428,10 @@ function ReaderContent({
                     </div>
                     <button
                       type="button"
-                      onClick={() => handleVerseLookup(v.text)}
+                      onClick={() => handleVerseLookup(v)}
                       className="mt-2 w-full rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white"
                     >
-                      Pesquisar no grego
+                      {isOldTestament ? 'Pesquisar no hebraico' : 'Pesquisar no grego'}
                     </button>
                   </div>
                 )}
