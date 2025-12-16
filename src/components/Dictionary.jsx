@@ -138,6 +138,7 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
   const [lexiconData, setLexiconData] = useState(null);
   const [lexiconError, setLexiconError] = useState('');
   const [lexiconLoading, setLexiconLoading] = useState(false);
+  const [lexiconTranslations, setLexiconTranslations] = useState({});
   const ITEMS_PER_PAGE = 100;
 
   const greekEntries = useMemo(() => {
@@ -363,6 +364,40 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
     return () => window.removeEventListener('dictionary:lookup', handleLookup);
   }, [applyLookupPayload]);
 
+  useEffect(() => {
+    if (!lexiconData?.entries?.length) {
+      setLexiconTranslations({});
+      return undefined;
+    }
+
+    let cancelled = false;
+    setLexiconTranslations({});
+
+    const translateDefinitions = async () => {
+      const translatedMap = {};
+      for (const entry of lexiconData.entries) {
+        const definition = entry.definition?.trim();
+        const strongKey = entry.strong;
+        if (!definition || !strongKey) continue;
+        try {
+          translatedMap[strongKey] = await translateText(definition);
+        } catch (err) {
+          console.warn('Falha ao traduzir definição do léxico:', err);
+          translatedMap[strongKey] = 'Não foi possível traduzir automaticamente.';
+        }
+        if (cancelled) return;
+      }
+      if (!cancelled) {
+        setLexiconTranslations(translatedMap);
+      }
+    };
+
+    translateDefinitions();
+    return () => {
+      cancelled = true;
+    };
+  }, [lexiconData]);
+
   const handleSearch = (e) => {
     e.preventDefault();
     const trimmed = term.trim();
@@ -376,6 +411,13 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
   useEffect(() => {
     updateResults();
   }, [updateResults]);
+
+  const handleClear = () => {
+    setTerm('');
+    setSelectedEntry(null);
+    clearLexiconData();
+    updateResults('');
+  };
 
   const paginatedResults = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -497,7 +539,14 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
                               <div className="text-xs text-slate-500">{entry.translit}</div>
                             )}
                           </td>
-                          <td className="py-2 text-slate-600">{entry.definition || '—'}</td>
+                          <td className="py-2 text-slate-600">
+                            <div>{entry.definition || '—'}</div>
+                            {entry.definition && (
+                              <div className="mt-1 text-xs text-brand-700">
+                                {lexiconTranslations[entry.strong] || 'Traduzindo para português…'}
+                              </div>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
