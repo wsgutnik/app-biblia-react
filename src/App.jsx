@@ -36,6 +36,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isReaderExpanded, setIsReaderExpanded] = useState(false);
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
+  const [navHeight, setNavHeight] = useState(0);
 
   useEffect(() => {
     const loadAllData = async () => {
@@ -164,6 +165,7 @@ function App() {
       <PrimaryNav
         onSearch={handleGlobalSearch}
         onToggleMenu={() => setIsMenuDrawerOpen((prev) => !prev)}
+        onHeightChange={setNavHeight}
       />
       <GlobalMenu
         activeTab={activeTab}
@@ -171,41 +173,9 @@ function App() {
         onQuickAction={handleQuickAction}
         isDrawerOpen={isMenuDrawerOpen}
         setDrawerOpen={setIsMenuDrawerOpen}
+        topOffset={navHeight}
       />
       <div className="mx-auto flex w-full flex-col gap-6 px-4 pb-28 pt-6 sm:px-6">
-        <section className="rounded-2xl border border-white/70 bg-white p-5 shadow-card">
-          <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Continuar estudo</p>
-            <h1 className="text-2xl font-semibold text-slate-900">Bíblia Sagrada ADBelem</h1>
-            <p className="text-sm text-slate-500">
-              Plano de leitura, destaques, comentários e recursos pastorais em um painel mobile-first.
-            </p>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickAction('reader')}
-              className="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700"
-            >
-              Ler agora
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickAction('dictionary')}
-              className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300"
-            >
-              Dicionário Strong
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickAction('history')}
-              className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300"
-            >
-              Histórico rápido
-            </button>
-          </div>
-        </section>
-
         <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
 
         <main
@@ -256,6 +226,39 @@ function App() {
             })()}
           </Suspense>
         </main>
+
+        <section className="rounded-2xl border border-white/70 bg-white p-5 shadow-card">
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Continuar estudo</p>
+            <h1 className="text-2xl font-semibold text-slate-900">Bíblia Sagrada ADBelem</h1>
+            <p className="text-sm text-slate-500">
+              Plano de leitura, destaques, comentários e recursos pastorais em um painel mobile-first.
+            </p>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => handleQuickAction('reader')}
+              className="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700"
+            >
+              Ler agora
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickAction('dictionary')}
+              className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300"
+            >
+              Dicionário Strong
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickAction('history')}
+              className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300"
+            >
+              Histórico rápido
+            </button>
+          </div>
+        </section>
 
         {!isReaderExpanded && (
           <>
