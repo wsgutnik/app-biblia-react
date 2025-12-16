@@ -49,18 +49,13 @@ const dispatchTabNavigation = (tab) => {
 };
 
 const BrandCluster = () => (
-  <div className="flex flex-col items-center gap-1.5 text-center">
-    <img
-      src="/logos/Bethlehem-Brasao-Novo-black.png"
-      alt="Bethlehem Ministry logo"
-      className="h-12 w-auto object-contain sm:h-14"
-    />
-    <div className="leading-tight">
-      <p className="text-[10px] uppercase tracking-[0.35em] text-slate-500">
-        Bethlehem Ministry
-      </p>
-      <p className="text-xs font-semibold text-slate-900 sm:text-sm">Assemblies of God</p>
-    </div>
+  <div className="flex flex-col items-center gap-0.5 text-center leading-tight">
+    <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+      Biblia Sagrada
+    </h1>
+    <p className="text-xs font-semibold tracking-[0.3em] text-slate-500 sm:text-sm">
+      Plus Tools
+    </p>
   </div>
 );
 
@@ -190,7 +185,7 @@ function PrimaryNav({ onSearch, onToggleMenu, onHeightChange }) {
             </IconButton>
           </div>
           <div className="flex justify-center px-2">
-
+            <BrandCluster />
           </div>
           <div className="flex items-center gap-2 justify-center sm:justify-end">
             <button
@@ -209,11 +204,7 @@ function PrimaryNav({ onSearch, onToggleMenu, onHeightChange }) {
           </div>
         </div>
 
-        <div className="mt-6 flex justify-center">
-          <BrandCluster />
-        </div>
-
-        <form onSubmit={handleSearchSubmit} className="mt-3 relative flex">
+        <form onSubmit={handleSearchSubmit} className="mt-4 relative flex">
           <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
             <SearchIcon />
           </span>
