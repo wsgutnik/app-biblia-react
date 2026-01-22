@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 
 const TABS_CONFIG = [
   { id: 'reader', label: 'Leitura' },
@@ -43,5 +44,10 @@ function Tabs({ activeTab, setActiveTab }) {
     </div>
   );
 }
+
+Tabs.propTypes = {
+  activeTab: PropTypes.string.isRequired,
+  setActiveTab: PropTypes.func.isRequired,
+};
 
 export default Tabs;

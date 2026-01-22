@@ -23,7 +23,7 @@ const ShareIcon = () => (
 
 // NOVO: Ícone de seta para minimizar/expandir
 const MinimizeIcon = ({ isMinimized }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-300" style={{ transform: isMinimized ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform duration-300 ${isMinimized ? 'rotate-180' : 'rotate-0'}`}>
         <polyline points="18 15 12 9 6 15"></polyline>
     </svg>
 );

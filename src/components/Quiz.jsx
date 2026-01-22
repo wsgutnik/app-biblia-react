@@ -4,9 +4,9 @@ import Papa from 'papaparse';
 import { translateText } from '../utils/translate';
 import { isAuth0Configured } from '../config/auth0';
 import { syncQuizStats } from '../utils/activitiesService';
+import { STORAGE_KEYS, getFromStorage, setInStorage } from '../config/constants';
 
 const CSV_PATH = '/100_bible_trivia_rewritten.csv';
-const STORAGE_KEY = 'quiz_progress_v1';
 const ANSWER_MAP = { A: 0, B: 1, C: 2, D: 3 };
 
 function QuizContent({ auth }) {
@@ -24,18 +24,12 @@ function QuizContent({ auth }) {
   const { isAuthenticated, user } = auth ?? { isAuthenticated: false, user: null };
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setProgress(JSON.parse(stored));
-      }
-    } catch {
-      // ignore parsing errors
-    }
+    const stored = getFromStorage(STORAGE_KEYS.QUIZ_PROGRESS, { correct: 0, total: 0 });
+    setProgress(stored);
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    setInStorage(STORAGE_KEYS.QUIZ_PROGRESS, progress);
   }, [progress]);
 
   useEffect(() => {

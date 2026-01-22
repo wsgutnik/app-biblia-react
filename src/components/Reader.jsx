@@ -6,46 +6,16 @@ import { appendReadingHistory } from '../utils/activitiesService';
 import { isAuth0Configured } from '../config/auth0';
 import { saveLastReading } from '../utils/profileService';
 import { API_PREFIX, authorizedJsonFetch } from '../utils/apiClient';
-
-// --- Sub-componente para o Pop-up de Partilha ---
-const SharePopup = ({ text, position, onShare }) => {
-  if (!text) return null;
-
-  // Função para evitar que o clique no botão desfaça a seleção de texto
-  const handleMouseDown = (e) => {
-    e.preventDefault(); 
-  };
-  
-  return (
-    <div
-      className="absolute z-10"
-      style={{ left: position.x, top: position.y, transform: 'translate(-50%, -120%)' }}
-      onMouseDown={handleMouseDown}
-    >
-      <button 
-        onClick={onShare} 
-        className="bg-slate-800 text-white px-4 py-2 rounded-lg shadow-lg font-semibold text-sm hover:bg-slate-700 transition-colors"
-      >
-        Partilhar
-      </button>
-    </div>
-  );
-};
-
-
-const HIGHLIGHTS_STORAGE_KEY = 'verseHighlights';
-const DICTIONARY_LOOKUP_STORAGE_KEY = 'lastDictionaryLookup';
-const buildVerseKey = (bookAbbrev, chapterNumber, verseNumber) =>
-  `${bookAbbrev}-${chapterNumber}-${verseNumber}`;
-
-const HIGHLIGHT_OPTIONS = [
-  { id: 'sun', label: 'Amarelo', background: '#fff7c2', accent: '#facc15' },
-  { id: 'sky', label: 'Azul', background: '#d7f0ff', accent: '#38bdf8' },
-  { id: 'mint', label: 'Verde', background: '#dff8e3', accent: '#34d399' },
-  { id: 'blush', label: 'Rosa', background: '#ffe3f0', accent: '#f472b6' },
-  { id: 'lavender', label: 'Lilás', background: '#eee4ff', accent: '#c084fc' },
-  { id: 'underline', label: 'Sublinhar', accent: '#94a3b8', variant: 'underline' }
-];
+import SharePopup from './SharePopup';
+import {
+  STORAGE_KEYS,
+  HIGHLIGHT_OPTIONS,
+  buildVerseKey,
+  getFromStorage,
+  setInStorage,
+  DEFAULTS,
+  VIEW_MODES
+} from '../config/constants';
 
 const normalizeHighlightPayload = (payload = {}) => {
   if (!payload || typeof payload !== 'object') return {};
@@ -53,7 +23,7 @@ const normalizeHighlightPayload = (payload = {}) => {
     if (typeof value === 'string') {
       acc[key] = value;
     } else if (value === true) {
-      acc[key] = 'sun';
+      acc[key] = DEFAULTS.HIGHLIGHT_COLOR;
     }
     return acc;
   }, {});
@@ -68,11 +38,11 @@ function ReaderContent({
   onToggleFocus,
   auth
 }) {
-  const [viewMode, setViewMode] = useState('single'); // 'single' ou 'compare'
-  const [version1, setVersion1] = useState('almeida_rc');
-  const [version2, setVersion2] = useState('kjv');
-  const [book, setBook] = useState('gn');
-  const [chapter, setChapter] = useState('1');
+  const [viewMode, setViewMode] = useState(VIEW_MODES.SINGLE);
+  const [version1, setVersion1] = useState(DEFAULTS.BIBLE_VERSION);
+  const [version2, setVersion2] = useState(DEFAULTS.COMPARE_VERSION);
+  const [book, setBook] = useState(DEFAULTS.BOOK);
+  const [chapter, setChapter] = useState(DEFAULTS.CHAPTER);
   
   // Estados para o pop-up de partilha
   const [selectedText, setSelectedText] = useState('');
@@ -82,15 +52,9 @@ function ReaderContent({
   const lastHistoryEntryRef = useRef(null);
   const lastSavedReadingRef = useRef(null);
   const { isAuthenticated, user } = auth ?? { isAuthenticated: false, user: null };
-  const [highlightedVerses, setHighlightedVerses] = useState(() => {
-    if (typeof window === 'undefined') return {};
-    try {
-      const raw = window.localStorage.getItem(HIGHLIGHTS_STORAGE_KEY);
-      return raw ? normalizeHighlightPayload(JSON.parse(raw)) : {};
-    } catch {
-      return {};
-    }
-  });
+  const [highlightedVerses, setHighlightedVerses] = useState(() =>
+    normalizeHighlightPayload(getFromStorage(STORAGE_KEYS.VERSE_HIGHLIGHTS, {}))
+  );
   const [activePalette, setActivePalette] = useState(null);
   const lastSyncedHighlightsRef = useRef(null);
 
@@ -109,13 +73,13 @@ function ReaderContent({
       chapter,
       timestamp: Date.now(),
     };
-    let history = JSON.parse(localStorage.getItem('readingHistory')) || [];
+    let history = getFromStorage(STORAGE_KEYS.READING_HISTORY, []);
     history = history.filter(
       (h) => !(h.bookAbbrev === book && String(h.chapter) === String(chapter))
     );
     history.unshift(entry);
     if (history.length > 50) history = history.slice(0, 50);
-    localStorage.setItem('readingHistory', JSON.stringify(history));
+    setInStorage(STORAGE_KEYS.READING_HISTORY, history);
 
     const trySyncHistory = async () => {
       if (!isAuth0Configured || !isAuthenticated || !user?.sub) return;
@@ -173,12 +137,7 @@ function ReaderContent({
   }, [book, chapter, isAuthenticated, user?.sub, onStreakRecorded, version1]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      window.localStorage.setItem(HIGHLIGHTS_STORAGE_KEY, JSON.stringify(highlightedVerses));
-    } catch (err) {
-      console.warn('Não foi possível guardar destaques:', err);
-    }
+    setInStorage(STORAGE_KEYS.VERSE_HIGHLIGHTS, highlightedVerses);
   }, [highlightedVerses]);
 
   useEffect(() => {
@@ -324,11 +283,7 @@ function ReaderContent({
       testament: isOldTestament ? 'ot' : 'nt',
       timestamp: Date.now()
     };
-    try {
-      window.localStorage.setItem(DICTIONARY_LOOKUP_STORAGE_KEY, JSON.stringify(payload));
-    } catch {
-      // ignore storage failures
-    }
+    setInStorage(STORAGE_KEYS.LAST_DICTIONARY_LOOKUP, payload);
     window.dispatchEvent(new CustomEvent('dictionary:lookup', { detail: payload }));
     window.dispatchEvent(new CustomEvent('app:navigate', { detail: { tab: 'dictionary' } }));
   };

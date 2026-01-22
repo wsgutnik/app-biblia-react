@@ -411,7 +411,7 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
   };
 
   if (!greekDict && !hebrewDict) {
-    return <div style={{ padding: 20 }}>Dicionários ausentes no componente Dictionary. Ver Console.</div>;
+    return <div className="p-5">Dicionários ausentes no componente Dictionary. Ver Console.</div>;
   }
 
   if (searchIn === 'greek' && !greekDict) {
