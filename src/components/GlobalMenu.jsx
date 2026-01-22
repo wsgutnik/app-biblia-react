@@ -6,9 +6,8 @@ const MENU_ITEMS = [
   { id: 'dictionary', label: 'Dicionário', description: 'Strong e léxicos' },
   { id: 'commentary', label: 'Comentários', description: 'Contexto histórico' },
   { id: 'quiz', label: 'Quiz', description: 'Teste seus conhecimentos' },
-  { id: 'plans', label: 'Planos', description: 'Rotinas personalizadas' },
   { id: 'history', label: 'Histórico', description: 'Últimas leituras' },
-  { id: 'profile', label: 'Perfil', description: 'Dados e metas' },
+  { id: 'profile', label: 'Perfil', description: 'Dados e estatísticas' },
 ];
 
 const QUICK_ACTIONS = [

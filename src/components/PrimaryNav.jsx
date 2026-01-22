@@ -13,26 +13,9 @@ const IconButton = ({ label, children, onClick }) => (
   </button>
 );
 
-const GlobeIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
-    <circle cx="12" cy="12" r="9" />
-    <path d="M3 12h18" />
-    <path d="M12 3c-2.5 3.5-2.5 14 0 18" />
-    <path d="M12 3c2.5 3.5 2.5 14 0 18" transform="scale(-1,1) translate(-24,0)" />
-  </svg>
-);
-
 const MenuIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M4 7h16M6 12h12M8 17h8" />
-  </svg>
-);
-
-const DotsIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 6h.01" />
-    <path d="M12 12h.01" />
-    <path d="M12 18h.01" />
   </svg>
 );
 
@@ -173,38 +156,19 @@ function PrimaryNav({ onSearch, onToggleMenu, onHeightChange }) {
 
   return (
     <header ref={headerRef} className="sticky top-0 z-40 border-b border-white/70 bg-[#f6f8fb]/95 backdrop-blur">
-      <div className="mx-auto w-full px-4 py-3 sm:px-6">
-        <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-[auto,1fr,auto] sm:items-center">
-          <div className="flex items-center gap-3 justify-center sm:justify-start">
-            <IconButton label="Abrir menu" onClick={onToggleMenu}>
-              <MenuIcon />
-            </IconButton>
-          </div>
-          <div className="flex justify-center px-2">
-
-          </div>
-          <div className="flex items-center gap-2 justify-center sm:justify-end">
-            <button
-              type="button"
-              className="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700"
-            >
-              Doar
-            </button>
-            <IconButton label="Alterar idioma">
-              <GlobeIcon />
-            </IconButton>
-            <IconButton label="Mais opções">
-              <DotsIcon />
-            </IconButton>
-            <AccountMenu />
-          </div>
+      <div className="mx-auto max-w-5xl w-full px-4 py-4 sm:px-6 sm:py-6">
+        <div className="flex items-center justify-between mb-6">
+          <IconButton label="Abrir menu" onClick={onToggleMenu}>
+            <MenuIcon />
+          </IconButton>
+          <AccountMenu />
         </div>
 
-        <div className="mt-6 flex justify-center">
+        <div className="flex justify-center mb-6">
           <BrandCluster />
         </div>
 
-        <form onSubmit={handleSearchSubmit} className="mt-3 relative flex">
+        <form onSubmit={handleSearchSubmit} className="relative flex max-w-2xl mx-auto">
           <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
             <SearchIcon />
           </span>
