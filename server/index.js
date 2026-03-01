@@ -365,8 +365,6 @@ secureRouter.post('/streak', async (req, res) => {
   }
 });
 
-app.use(API_PREFIX, secureRouter);
-
 app.post('/tracking/search', async (req, res) => {
   try {
     const payload = req.body || {};
@@ -396,7 +394,7 @@ app.get('/tracking/search/top', async (req, res) => {
   }
 });
 
-app.post('/donations/checkout-session', async (req, res) => {
+const createDonationCheckoutSession = async (req, res) => {
   const stripe = getStripeClient();
   if (!stripe) {
     return res.status(503).json({ error: 'Stripe não configurado no servidor.' });
@@ -444,7 +442,10 @@ app.post('/donations/checkout-session', async (req, res) => {
     console.error('Failed to create Stripe Checkout session:', err.message);
     res.status(500).json({ error: 'Erro ao iniciar checkout de doação' });
   }
-});
+};
+
+app.post(`${API_PREFIX}/donations/checkout-session`, createDonationCheckoutSession);
+app.post('/donations/checkout-session', createDonationCheckoutSession);
 
 app.get('/health', (req, res) => {
   res.json({ ok: true });
@@ -511,6 +512,8 @@ app.get('/entries/:number', async (req, res) => {
     res.status(500).json({ error: 'Erro interno ao consultar o verbete solicitado' });
   }
 });
+
+app.use(API_PREFIX, secureRouter);
 
 async function start() {
   await seedDatabase();

@@ -48,7 +48,7 @@ Rotas disponíveis:
 - `GET /health` – verificação simples
 - `GET /entries?q=agape&language=greek&limit=10` – busca leve por número, lema ou transliteração
 - `GET /entries/:number` – obtém um verbete completo (ex.: `/entries/G25`)
-- `POST /donations/checkout-session` – cria sessão Stripe Checkout para doação (retorna `url` para redirecionamento)
+- `POST /api/donations/checkout-session` – cria sessão Stripe Checkout para doação (retorna `url` para redirecionamento)
 - Rotas autenticadas (enviar cabeçalho `x-user-sub` com o `sub` do usuário Auth0):
   - `GET /api/profile` e `PUT /api/profile` – lê/sincroniza dados pessoais
   - `GET /api/activities` e `PUT /api/activities` – consulta e sincroniza progresso do quiz/histórico de leitura
@@ -64,6 +64,8 @@ No `server/.env` configure:
 - `DONATION_CURRENCY` (opcional, padrão `usd`)
 - `DONATION_PRODUCT_NAME` (opcional)
 - `DONATION_SITE_URL` (opcional; fallback para montar URLs de sucesso/cancelamento)
+
+Opcional no frontend (`.env.local`): defina `VITE_STRIPE_PAYMENT_LINK` para usar um Payment Link direto da Stripe no botão de doação (sem depender da rota de checkout da API).
 
 ### Deploy gratuito (Render)
 
