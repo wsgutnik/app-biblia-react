@@ -4,3 +4,4 @@ dist
 .env.development.local
 .env.production.local
 server/.env
+*.pem

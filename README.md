@@ -80,3 +80,29 @@ Observações:
 - O Supabase/Postgres precisa estar criado antes do deploy. O seed roda automaticamente quando a tabela `entries` está vazia.
 - A variável `DATABASE_URL` segue o formato `postgresql://postgres.<project-ref>:<senha>@aws-0-<regiao>.pooler.supabase.com:6543/postgres?pgbouncer=true&sslmode=require`.
 - O plano gratuito hiberna após alguns minutos sem uso; a primeira requisição pode levar alguns segundos enquanto o container desperta.
+
+### Deploy na AWS
+
+Se você quiser publicar no ecossistema AWS:
+
+1. Frontend (`Vite`): publicar `dist/` em S3 + CloudFront (ou AWS Amplify Hosting).
+2. Backend (`Express`): publicar em ECS Fargate, App Runner ou EC2.
+3. Banco: usar o segredo do RDS no Secrets Manager para não manter `DATABASE_URL` em texto.
+
+Variáveis mínimas no backend AWS:
+
+- `DATABASE_SECRET_ARN` (ex.: `arn:aws:secretsmanager:us-east-1:...:secret:rds!...`)
+- `DATABASE_SECRET_NAME` (ou `AWS_SECRET_NAME` / `SECRET_NAME`) também é aceito
+- `AWS_REGION=us-east-1`
+- `DATABASE_SSL=false` (ajuste conforme sua rede/TLS)
+- `STRIPE_SECRET_KEY` e demais variáveis já descritas acima
+
+Observação: o `npm start` do backend agora executa um bootstrap que lê o segredo no AWS Secrets Manager e monta automaticamente `DATABASE_URL` em runtime. Para funcionar na AWS, a role da instância/tarefa precisa de permissão `secretsmanager:GetSecretValue` no segredo configurado.
+
+Exemplo com o seu segredo:
+
+```bash
+SECRET_NAME=rds!cluster-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+AWS_REGION=us-east-1
+DATABASE_SSL=false
+```
