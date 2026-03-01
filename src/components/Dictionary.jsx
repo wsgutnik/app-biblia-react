@@ -372,6 +372,13 @@ function Dictionary({ greekDict, hebrewDict, bibleData }) {
       recordSearchTerm(searchIn, trimmed);
     }
   };
+
+  const handleClear = () => {
+    setTerm('');
+    setSelectedEntry(null);
+    clearLexiconData();
+    updateResults('');
+  };
   
   useEffect(() => {
     updateResults();

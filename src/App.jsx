@@ -1,4 +1,4 @@
-import React, { useEffect, useState, Suspense, lazy, useRef, useCallback } from 'react';
+import React, { useEffect, useState, Suspense, lazy, useRef } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import Papa from 'papaparse';
 import { VERSIONS, BOOKS } from './data';
@@ -15,6 +15,7 @@ import ReadingPlansPanel from './components/ReadingPlansPanel';
 import VideoHighlightPanel from './components/VideoHighlightPanel';
 import GlobalMenu from './components/GlobalMenu';
 import TopSearchesPanel from './components/TopSearchesPanel';
+import { createDonationCheckoutSession } from './utils/donationService';
 
 const Reader = lazy(() => import('./components/Reader'));
 const Search = lazy(() => import('./components/Search'));
@@ -39,6 +40,8 @@ function AppContent({ auth }) {
   const [isReaderExpanded, setIsReaderExpanded] = useState(false);
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const [navHeight, setNavHeight] = useState(0);
+  const [isDonationLoading, setIsDonationLoading] = useState(false);
+  const [donationError, setDonationError] = useState('');
   const isAuthenticated = auth?.isAuthenticated ?? false;
   const user = auth?.user ?? null;
   const lastReadingUserRef = useRef(null);
@@ -170,6 +173,22 @@ function AppContent({ auth }) {
     }
   };
 
+  const handleDonate = async () => {
+    if (isDonationLoading) return;
+    setDonationError('');
+    setIsDonationLoading(true);
+    try {
+      const checkoutUrl = await createDonationCheckoutSession();
+      if (!checkoutUrl) {
+        throw new Error('Não foi possível iniciar a doação.');
+      }
+      window.location.assign(checkoutUrl);
+    } catch (err) {
+      setDonationError(err?.message || 'Falha ao iniciar pagamento.');
+      setIsDonationLoading(false);
+    }
+  };
+
   if (isLoading) {
     return (
         <div className="flex items-center justify-center h-screen bg-surface">
@@ -282,7 +301,16 @@ function AppContent({ auth }) {
             >
               Dicionário Strong
             </button>
+            <button
+              type="button"
+              onClick={handleDonate}
+              disabled={isDonationLoading}
+              className="rounded-full border border-emerald-200 bg-emerald-50 px-6 py-3 text-sm font-semibold text-emerald-700 hover:border-emerald-300 hover:bg-emerald-100 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isDonationLoading ? 'Redirecionando...' : 'Doar'}
+            </button>
           </div>
+          {donationError && <p className="mt-4 text-sm text-red-600">{donationError}</p>}
         </section>
 
         {!isReaderExpanded && (

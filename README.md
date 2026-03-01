@@ -48,11 +48,22 @@ Rotas disponíveis:
 - `GET /health` – verificação simples
 - `GET /entries?q=agape&language=greek&limit=10` – busca leve por número, lema ou transliteração
 - `GET /entries/:number` – obtém um verbete completo (ex.: `/entries/G25`)
+- `POST /donations/checkout-session` – cria sessão Stripe Checkout para doação (retorna `url` para redirecionamento)
 - Rotas autenticadas (enviar cabeçalho `x-user-sub` com o `sub` do usuário Auth0):
   - `GET /api/profile` e `PUT /api/profile` – lê/sincroniza dados pessoais
   - `GET /api/activities` e `PUT /api/activities` – consulta e sincroniza progresso do quiz/histórico de leitura
 
 No front defina `VITE_API_URL` (vide `.env.example`) para apontar para a URL base do backend. Depois disso, os fetches podem usar `fetch(\`\${import.meta.env.VITE_API_URL}/entries/G25\`)`.
+
+### Stripe (Doações)
+
+No `server/.env` configure:
+
+- `STRIPE_SECRET_KEY` (obrigatório, **somente backend**)
+- `DONATION_AMOUNT_CENTS` (opcional, padrão `500`)
+- `DONATION_CURRENCY` (opcional, padrão `usd`)
+- `DONATION_PRODUCT_NAME` (opcional)
+- `DONATION_SITE_URL` (opcional; fallback para montar URLs de sucesso/cancelamento)
 
 ### Deploy gratuito (Render)
 

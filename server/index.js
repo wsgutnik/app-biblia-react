@@ -28,10 +28,58 @@ const {
 } = require('./db');
 
 const API_PREFIX = '/api';
+const DEFAULT_FRONTEND_ORIGIN = 'http://localhost:5173';
+const DONATION_MIN_AMOUNT_CENTS = 100;
+const DONATION_MAX_AMOUNT_CENTS = 500000;
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
+
+let stripeClient = null;
+
+const isValidAbsoluteHttpUrl = (value) => {
+  if (!value || typeof value !== 'string') return false;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
+const getStripeClient = () => {
+  const secretKey = (process.env.STRIPE_SECRET_KEY || '').trim();
+  if (!secretKey) return null;
+  if (!stripeClient) {
+    const Stripe = require('stripe');
+    stripeClient = new Stripe(secretKey);
+  }
+  return stripeClient;
+};
+
+const resolveDonationOrigin = (req) => {
+  const envUrl = (process.env.DONATION_SITE_URL || '').trim();
+  if (isValidAbsoluteHttpUrl(envUrl)) return envUrl;
+  const requestOrigin = req.get('origin');
+  if (isValidAbsoluteHttpUrl(requestOrigin)) return requestOrigin;
+  return DEFAULT_FRONTEND_ORIGIN;
+};
+
+const resolveDonationAmount = (rawAmount) => {
+  const envAmount = parseInt(process.env.DONATION_AMOUNT_CENTS, 10);
+  const fallback = Number.isInteger(envAmount) ? envAmount : 500;
+  if (rawAmount === undefined || rawAmount === null || rawAmount === '') {
+    return fallback;
+  }
+  const parsed = parseInt(rawAmount, 10);
+  return Number.isInteger(parsed) ? parsed : NaN;
+};
+
+const resolveDonationCurrency = () => {
+  const value = (process.env.DONATION_CURRENCY || 'usd').trim().toLowerCase();
+  return /^[a-z]{3}$/.test(value) ? value : 'usd';
+};
 
 const requireUser = (req, res, next) => {
   const auth0Sub = req.header('x-user-sub');
@@ -345,6 +393,56 @@ app.get('/tracking/search/top', async (req, res) => {
   } catch (err) {
     console.error('Failed to load search leaderboard:', err.message);
     res.status(500).json({ error: 'Erro ao consultar ranking de buscas' });
+  }
+});
+
+app.post('/donations/checkout-session', async (req, res) => {
+  const stripe = getStripeClient();
+  if (!stripe) {
+    return res.status(503).json({ error: 'Stripe não configurado no servidor.' });
+  }
+
+  const amount = resolveDonationAmount(req.body?.amount);
+  if (!Number.isInteger(amount) || amount < DONATION_MIN_AMOUNT_CENTS || amount > DONATION_MAX_AMOUNT_CENTS) {
+    return res.status(400).json({
+      error: `Valor inválido. Use um valor entre ${DONATION_MIN_AMOUNT_CENTS} e ${DONATION_MAX_AMOUNT_CENTS} centavos.`
+    });
+  }
+
+  const currency = resolveDonationCurrency();
+  const origin = resolveDonationOrigin(req);
+  const successUrl = `${origin}/?donation=success`;
+  const cancelUrl = `${origin}/?donation=cancelled`;
+  const productName = (process.env.DONATION_PRODUCT_NAME || 'Apoie o projeto Bíblia Sagrada').trim();
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      submit_type: 'donate',
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency,
+            unit_amount: amount,
+            product_data: {
+              name: productName
+            }
+          }
+        }
+      ]
+    });
+
+    if (!session?.url) {
+      throw new Error('Checkout session sem URL de redirecionamento.');
+    }
+
+    res.status(201).json({ id: session.id, url: session.url });
+  } catch (err) {
+    console.error('Failed to create Stripe Checkout session:', err.message);
+    res.status(500).json({ error: 'Erro ao iniciar checkout de doação' });
   }
 });
 
